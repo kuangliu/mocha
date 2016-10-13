@@ -12,20 +12,41 @@ import re
 
 class PrototxtParser:
     def __init__(self, prototxt):
-        print('load prototxt..')
+        print('==> load prototxt..')
         f = open(prototxt, 'r')
         # read file content to a single string
         c = f.read()
         # remove dulplicate spaces
         cc = re.sub('%s+', ' ', c).strip()
         # split by layer
-        print('split layers..')
+        print('==> split layers..')
         sp = cc.split('layer {')
         sp = [x.strip() for x in sp]
-        # parse line
+        # parse lines
+        self.net = {}
         for i,line in enumerate(sp):
-            print('parsing line ' + str(i) + '..')
-            print(self.__parse_line(line))
+            print('==> parsing line ' + str(i) + '..')
+            layer = self.__parse_line(line)
+            if 'name' in layer:   # every layer has a name
+                layer_name = layer['name']
+                print('find layer: '+layer_name)
+                self.net[layer_name] = {}
+                for k,v in layer.items():
+                    self.net[layer_name][k] = v
+
+    def get_param(self, layer_name, param_type, param_name, optional_name=None):
+        '''Return param value of [layer_name].[param_type].[param_name]
+                              or [layer_name].[param_type].[optional_name]
+        e.g. conv1.convolution_param.pad_h
+        '''
+        assert layer_name in self.net
+        if param_name in self.net[layer_name][param_type]:
+            return self.net[layer_name][param_type][param_name]
+        elif optional_name in self.net[layer_name][param_type]:
+            return self.net[layer_name][param_type][optional_name]
+        else:
+            print('[ERROR] No param '+param_name+' or '+optional_name+' in layer '+layer_name)
+            assert False
 
     def __parse_line(self, line):
         ''' Recursive function converting prototxt layer string to dict.
@@ -76,4 +97,4 @@ class PrototxtParser:
         return s
 
 
-p = PrototxtParser('./model/net.t7.prototxt')
+# p = PrototxtParser('./model/net.t7.prototxt')

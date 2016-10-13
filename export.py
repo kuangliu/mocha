@@ -7,10 +7,9 @@ import numpy as np
 from parser import PrototxtParser
 
 
-#---------------------------------------------------------------
 # 1. define .prototxt parser
-#
 parser = PrototxtParser('./model/net.t7.prototxt')
+
 
 # 2. load caffe model
 net = caffe.Net('./model/net.t7.prototxt', './model/net.t7.caffemodel', caffe.TEST)
@@ -21,7 +20,21 @@ if not os.path.isdir(save_dir):
     os.mkdir(save_dir)
 
 # log file storing layer info
-net_log = open(save_dir+'net.log', 'w')
+logfile = open(save_dir+'net.log', 'w')
+
+# write list content to file
+def writeln(file, lst):
+    content = ''
+    for x in lst:
+        content = content + str(x) + '\t'
+    file.write(content+'\n')
+
+# print list content to console
+def println(lst):
+    content = ''
+    for x in lst:
+        content = content + str(x) + ' '
+    print(content)
 
 # 3. dump layer params
 print('\nexporting..')
@@ -33,31 +46,48 @@ for i in range(layer_num):
     if layer_type == 'InnerProduct':
         layer_weight = net.params[layer_name][0].data
         layer_bias = net.params[layer_name][1].data
+        input_size = layer_weight.shape[1]
+        output_size = layer_weight.shape[0]
         # save params
         np.save(save_dir+layer_name+'_weight', layer_weight)
         np.save(save_dir+layer_name+'_bias', layer_bias)
         # logging
-        net_log.write(str(i)+'\tLinear\t'+layer_name+'\n')
-        # print info
-        input_size = layer_weight.shape[1]
-        output_size = layer_weight.shape[0]
-        print('==> layer '+str(i)+': Linear ['+str(input_size)+'->'+str(output_size)+']')
-
+        println(['==> layer', i, ': Linear [', str(input_size), '->', str(output_size), ']'])
+        writeln(logfile, [i, 'Linear', layer_name])
     elif layer_type == 'ReLU':
-        print('==> layer '+str(i)+': ReLU')
-        net_log.write(str(i)+'\tReLU\t'+layer_name+'\n')
-
+        print('==> layer '+str(i)+' : ReLU')
+        writeln(logfile, [i, 'ReLU', layer_name])
+    elif layer_type == 'Flatten':
+        print('==> layer '+str(i)+' : Flatten')
+        writeln(logfile, [i, 'Flatten', layer_name])
     elif layer_type == 'Convolution':
-        print('==> layer '+str(i)+': Convolution')
+        layer_weight = net.params[layer_name][0].data
+        layer_bias = net.params[layer_name][1].data
+        np.save(save_dir+layer_name+'_weight', layer_weight)
+        np.save(save_dir+layer_name+'_bias', layer_bias)
+        # parse conv params
+        kW = parser.get_param(layer_name, 'convolution_param', 'kernel_w', 'kernel_size')
+        kH = parser.get_param(layer_name, 'convolution_param', 'kernel_h', 'kernel_size')
+        dW = parser.get_param(layer_name, 'convolution_param', 'stride_w', 'stride')
+        dH = parser.get_param(layer_name, 'convolution_param', 'stride_h', 'stride')
+        pW = parser.get_param(layer_name, 'convolution_param', 'pad_w', 'pad')
+        pH = parser.get_param(layer_name, 'convolution_param', 'pad_h', 'pad')
+        # logging
+        println(['==> layer', i, ': Convolution [', kW,kH,dW,dH,pW,pH, ']'])
+        writeln(logfile, [i, 'Convolution', layer_name, kW,kH,dW,dH,pW,pH])
+
+logfile.close()
 
 
 
 
-net_log.close()
 
 
-# net._layer_names[0]
-# name = net._layer_names[1]
+
+# net._layer_names[2]
+# name = net._layer_names[2]
+
+
 #
 #
 # w = net.params[name][0].data

@@ -19,15 +19,17 @@ while true do
     line = logfile:read('*l')
     if not line then break end
 
-    splited = string.split(line, '\t')
-    layer_type = splited[2]
-    layer_name = splited[3]
+    sp = string.split(line, '\t')
+    layer_type = sp[2]
+    layer_name = sp[3]
 
+    i = (i or 0) + 1
     if layer_type == 'Linear' then
+        print('==> layer '..i..': '..layer_type)
         -- load saved params
         layer_weight = npy4th.loadnpy(param_dir..layer_name..'_weight.npy')
         layer_bias = npy4th.loadnpy(param_dir..layer_name..'_bias.npy')
-        -- build a new layer
+        -- define Linear layer
         inputSize = layer_weight:size(2)
         outputSize = layer_weight:size(1)
         layer = nn.Linear(inputSize, outputSize)
@@ -36,22 +38,36 @@ while true do
         layer.bias:copy(layer_bias)
         net:add(layer)
     elseif layer_type == 'ReLU' then
+        print('==> layer '..i..': '..layer_type)
         net:add(nn.ReLU(true))
-    elseif layer_name == 'Convolution' then
-        
+    elseif layer_type == 'Flatten' then
+        print('==> layer '..i..': '..layer_type)
+        net:add(nn.View(-1))
+    elseif layer_type == 'Convolution' then
+        print('==> layer '..i..': '..layer_type)
+        layer_weight = npy4th.loadnpy(param_dir..layer_name..'_weight.npy')
+        layer_bias = npy4th.loadnpy(param_dir..layer_name..'_bias.npy')
+        -- define Conv layer
+        nInputPlane = layer_weight:size(2)
+        nOutputPlane = layer_weight:size(1)
+        kW,kH = tonumber(sp[4]),tonumber(sp[5])
+        dW,dH = tonumber(sp[6]),tonumber(sp[7])
+        pW,pH = tonumber(sp[8]),tonumber(sp[9])
+        layer = nn.SpatialConvolution(nInputPlane, nOutputPlane, kW,kH,dW,dH,pW,pH)
+        -- copy params
+        layer.weight:copy(layer_weight)
+        layer.bias:copy(layer_bias)
+        net:add(layer)
     end
-
-    -- print info
-    i = (i or 0) + 1
-    print('==> layer '..i..': '..layer_type)
 end
 
-torch.save('test.t7', net)
+torch.save('net.t7', net)
 
-n1 = torch.load('./test.t7')
-n2 = torch.load('./model/net.t7')
 
-x = torch.randn(2048)
+-- test
+print('testing..')
+x = torch.randn(1,1,5,5)
+y = net:float():forward(x:float())
+print(y)
 
-n1:forward(x:float())
-n2:forward(x)
+npy4th.savenpy('x.npy', x)
