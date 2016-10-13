@@ -35,10 +35,10 @@ while true do
         layer.weight:copy(layer_weight)
         layer.bias:copy(layer_bias)
         net:add(layer)
-
     elseif layer_type == 'ReLU' then
         net:add(nn.ReLU(true))
-
+    elseif layer_name == 'Convolution' then
+        
     end
 
     -- print info

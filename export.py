@@ -6,6 +6,7 @@ import caffe
 import numpy as np
 from parser import PrototxtParser
 
+
 #---------------------------------------------------------------
 # 1. define .prototxt parser
 #
@@ -46,7 +47,9 @@ for i in range(layer_num):
         print('==> layer '+str(i)+': ReLU')
         net_log.write(str(i)+'\tReLU\t'+layer_name+'\n')
 
-    elif layer_type == 'Convolution'
+    elif layer_type == 'Convolution':
+        print('==> layer '+str(i)+': Convolution')
+
 
 
 
