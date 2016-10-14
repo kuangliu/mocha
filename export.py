@@ -7,36 +7,34 @@ import numpy as np
 from parser import PrototxtParser
 
 
-# 1. define .prototxt parser
-parser = PrototxtParser('./model/net.t7.prototxt')
-
-
-# 2. load caffe model
-net = caffe.Net('./model/net.t7.prototxt', './model/net.t7.caffemodel', caffe.TEST)
-
-# directory for saving layer params (weight + bias)
-save_dir = './params/'
-if not os.path.isdir(save_dir):
-    os.mkdir(save_dir)
-
-# log file storing layer info
-logfile = open(save_dir+'net.log', 'w')
-
-# write list content to file
 def writeln(file, lst):
+    '''Write list content to file'''
     content = ''
     for x in lst:
         content = content + str(x) + '\t'
     file.write(content+'\n')
 
-# print list content to console
 def println(lst):
+    '''Print list content to console'''
     content = ''
     for x in lst:
         content = content + str(x) + ' '
     print(content)
 
-# 3. dump layer params
+# 1. define .prototxt parser
+parser = PrototxtParser('./model/net.t7.prototxt')
+
+# 2. load caffe model
+net = caffe.Net('./model/net.t7.prototxt', './model/net.t7.caffemodel', caffe.TEST)
+
+# directory for saving layer params and log
+save_dir = './params/'
+if not os.path.isdir(save_dir):
+    os.mkdir(save_dir)
+
+logfile = open(save_dir+'net.log', 'w')
+
+# 3. parse layer params
 print('\nexporting..')
 layer_num = len(net.layers)
 for i in range(layer_num):
@@ -75,6 +73,14 @@ for i in range(layer_num):
         # logging
         println(['==> layer', i, ': Convolution [', kW,kH,dW,dH,pW,pH, ']'])
         writeln(logfile, [i, 'Convolution', layer_name, kW,kH,dW,dH,pW,pH])
+    elif layer_type == 'BatchNorm':
+        running_mean = net.params[layer_name][0].data
+        running_var = net.params[layer_name][1].data
+        # momentum = net.params[layer_name][2].data
+        np.save(save_dir+layer_name+'_mean', running_mean)
+        np.save(save_dir+layer_name+'_var', running_var)
+        print('==> layer '+str(i)+' : BatchNorm')
+        writeln(logfile, [i, 'BatchNorm', layer_name])
 
 logfile.close()
 
@@ -84,14 +90,18 @@ logfile.close()
 
 
 
+#
 # net._layer_names[2]
+# net.layers[2].type
+#
 # name = net._layer_names[2]
+#
+# running_mean = net.params[name][0].data
+# running_var = net.params[name][1].data
+# momentum = net.params[name][2].data
 
 
-#
-#
-# w = net.params[name][0].data
-# b = net.params[name][1].data
+
 #
 # w.shape
 # b.shape

@@ -24,8 +24,8 @@ while true do
     layer_name = sp[3]
 
     i = (i or 0) + 1
+    print('==> layer '..i..': '..layer_type)
     if layer_type == 'Linear' then
-        print('==> layer '..i..': '..layer_type)
         -- load saved params
         layer_weight = npy4th.loadnpy(param_dir..layer_name..'_weight.npy')
         layer_bias = npy4th.loadnpy(param_dir..layer_name..'_bias.npy')
@@ -38,13 +38,10 @@ while true do
         layer.bias:copy(layer_bias)
         net:add(layer)
     elseif layer_type == 'ReLU' then
-        print('==> layer '..i..': '..layer_type)
         net:add(nn.ReLU(true))
     elseif layer_type == 'Flatten' then
-        print('==> layer '..i..': '..layer_type)
         net:add(nn.View(-1))
     elseif layer_type == 'Convolution' then
-        print('==> layer '..i..': '..layer_type)
         layer_weight = npy4th.loadnpy(param_dir..layer_name..'_weight.npy')
         layer_bias = npy4th.loadnpy(param_dir..layer_name..'_bias.npy')
         -- define Conv layer
@@ -58,6 +55,17 @@ while true do
         layer.weight:copy(layer_weight)
         layer.bias:copy(layer_bias)
         net:add(layer)
+    elseif layer_type == 'BatchNorm' then
+        running_mean = npy4th.loadnpy(param_dir..layer_name..'_mean.npy')
+        running_var = npy4th.loadnpy(param_dir..layer_name..'_var.npy')
+        -- deine BN layer
+        nOutput = running_mean:size(1)
+        layer = nn.SpatialBatchNormalization(nOutput, nil, nil, false) -- No affine
+        -- copy params
+        layer.running_mean:copy(running_mean)
+        layer.running_var:copy(running_var)
+    else
+        print('[ERROR]'..layer_type..' not supported yet!')
     end
 end
 
@@ -66,7 +74,7 @@ torch.save('net.t7', net)
 
 -- test
 print('testing..')
-x = torch.randn(1,1,5,5)
+x = torch.randn(1,5,5)
 y = net:float():forward(x:float())
 print(y)
 
