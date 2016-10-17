@@ -21,12 +21,13 @@ class PrototxtParser:
             layer_type = layer.type
             print('find layer '+layer_name)
             if layer_type == 'Convolution':
-                kW = layer.convolution_param.kernel_size[0] if len(layer.convolution_param.kernel_size) else layer.convolution_param.kernel_w
-                kH = layer.convolution_param.kernel_size[1] if len(layer.convolution_param.kernel_size) else layer.convolution_param.kernel_h
-                dW = layer.convolution_param.stride[0] if len(layer.convolution_param.stride) else layer.convolution_param.stride_w
-                dH = layer.convolution_param.stride[1] if len(layer.convolution_param.stride) else layer.convolution_param.stride_h
-                pW = layer.convolution_param.pad[0] if len(layer.convolution_param.pad) else layer.convolution_param.pad_w
-                pH = layer.convolution_param.pad[1] if len(layer.convolution_param.pad) else layer.convolution_param.pad_h
+                conv_param = layer.convolution_param
+                kW = conv_param.kernel_size[0] if len(conv_param.kernel_size) else conv_param.kernel_w
+                kH = conv_param.kernel_size[1] if len(conv_param.kernel_size) else conv_param.kernel_h
+                dW = conv_param.stride[0] if len(conv_param.stride) else conv_param.stride_w
+                dH = conv_param.stride[1] if len(conv_param.stride) else conv_param.stride_h
+                pW = conv_param.pad[0] if len(conv_param.pad) else conv_param.pad_w
+                pH = conv_param.pad[1] if len(conv_param.pad) else conv_param.pad_h
                 self.params[layer_name] = [kW,kH,dW,dH,pW,pH]
             elif layer_type == 'Pooling':
                 # TODO

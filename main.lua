@@ -1,5 +1,7 @@
 require 'nn';
 
+
+
 -- input: 1x1x10,10
 net = nn.Sequential()
 net:add(nn.SpatialConvolution(2,3,3,3));
