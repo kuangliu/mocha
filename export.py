@@ -4,7 +4,7 @@
 import os
 import caffe
 import numpy as np
-from parser import PrototxtParser
+from prototxt_parser import PrototxtParser
 
 
 def writeln(file, lst):
@@ -63,13 +63,8 @@ for i in range(layer_num):
         layer_bias = net.params[layer_name][1].data
         np.save(save_dir+layer_name+'_weight', layer_weight)
         np.save(save_dir+layer_name+'_bias', layer_bias)
-        # parse conv params
-        kW = parser.get_param(layer_name, 'convolution_param', 'kernel_w', 'kernel_size')
-        kH = parser.get_param(layer_name, 'convolution_param', 'kernel_h', 'kernel_size')
-        dW = parser.get_param(layer_name, 'convolution_param', 'stride_w', 'stride')
-        dH = parser.get_param(layer_name, 'convolution_param', 'stride_h', 'stride')
-        pW = parser.get_param(layer_name, 'convolution_param', 'pad_w', 'pad')
-        pH = parser.get_param(layer_name, 'convolution_param', 'pad_h', 'pad')
+        # get CONV params
+        kW,kH,dW,dH,pW,pH = parser.get_params(layer_name)
         # logging
         println(['==> layer', i, ': Convolution [', kW,kH,dW,dH,pW,pH, ']'])
         writeln(logfile, [i, 'Convolution', layer_name, kW,kH,dW,dH,pW,pH])

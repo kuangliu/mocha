@@ -6,7 +6,7 @@ binary = './model/net.t7.caffemodel'
 
 caffe.set_mode_cpu()
 net = caffe.Net(prototxt, binary, caffe.TEST)
-net.blobs['data'].reshape(1,1,5,5)
+net.blobs['data'].reshape(1,2,10,10)
 
 
 x = np.load('x.npy')

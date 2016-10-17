@@ -74,7 +74,7 @@ torch.save('net.t7', net)
 
 -- test
 print('testing..')
-x = torch.randn(1,5,5)
+x = torch.randn(2,10,10)
 y = net:float():forward(x:float())
 print(y)
 
