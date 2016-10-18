@@ -44,9 +44,9 @@ function conv_layer(layer_name)
     -- define conv layer
     local nInputPlane = weight:size(2)
     local nOutputPlane = weight:size(1)
-    local kW,kH = tonumber(sp[4]),tonumber(sp[5])
-    local dW,dH = tonumber(sp[6]),tonumber(sp[7])
-    local pW,pH = tonumber(sp[8]),tonumber(sp[9])
+    local kW,kH = tonumber(splited[4]),tonumber(splited[5])
+    local dW,dH = tonumber(splited[6]),tonumber(splited[7])
+    local pW,pH = tonumber(splited[8]),tonumber(splited[9])
     local layer = nn.SpatialConvolution(nInputPlane, nOutputPlane, kW,kH,dW,dH,pW,pH)
     -- copy params
     layer.weight:copy(weight)
@@ -62,12 +62,32 @@ function bn_layer(layer_name)
     local param_dir = './params/'
     local running_mean = npy4th.loadnpy(param_dir..layer_name..'_mean.npy')
     local running_var = npy4th.loadnpy(param_dir..layer_name..'_var.npy')
-    -- deine BN layer
+    -- define BN layer
     local nOutput = running_mean:size(1)
     local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, false) -- No affine
     -- copy params
     layer.running_mean:copy(running_mean)
     layer.running_var:copy(running_var)
+    return layer
+end
+
+--------------------------------------------------------
+-- New pooling layer
+--
+function pooling_layer(layer_name)
+    local pooling_type = splited[4]
+    local kW,kH = tonumber(splited[5]),tonumber(splited[6])
+    local dW,dH = tonumber(splited[7]),tonumber(splited[8])
+    local pW,pH = tonumber(splited[9]),tonumber(splited[10])
+
+    local layer
+    if pooling_type == '0' then
+        layer = nn.SpatialMaxPooling(kW,kH,dW,dH,pW,pH):ceil()
+    elseif pooling_type == '1' then
+        layer = nn.SpatialAveragePooling(kW,kH,dW,dH,pW,pH):ceil()
+    else
+        error('[ERROR]Pooling type not supported!')
+    end
     return layer
 end
 
@@ -82,9 +102,9 @@ while true do
     line = logfile:read('*l')
     if not line then break end
 
-    sp = string.split(line, '\t')
-    layer_type = sp[2]
-    layer_name = sp[3]
+    splited = string.split(line, '\t')
+    layer_type = splited[2]
+    layer_name = splited[3]
 
     i = (i or 0) + 1
     print('==> layer '..i..': '..layer_type)
@@ -98,6 +118,8 @@ while true do
         net:add(conv_layer(layer_name))
     elseif layer_type == 'BatchNorm' then
         net:add(bn_layer(layer_name))
+    elseif layer_type == 'Pooling' then
+        net:add(pooling_layer(layer_name))
     else
         print('[ERROR]'..layer_type..' not supported yet!')
     end

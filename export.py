@@ -40,12 +40,12 @@ def save_bn(net, layer_name, save_dir):
     np.save(save_dir+layer_name+'_mean', running_mean)
     np.save(save_dir+layer_name+'_var', running_var)
 
-def logging(file, lst):
+def logging(file, L):
     '''Write list content to log.'''
-    content = ''
-    for x in lst:
-        content = content + str(x) + '\t'
-    file.write(content+'\n')
+    s = ''
+    for x in L:
+        s = s + str(x) + '\t'
+    file.write(s+'\n')
 
 if __name__ == '__main__':
     # 1. define .prototxt parser
@@ -94,12 +94,14 @@ if __name__ == '__main__':
             # logging
             print('==> layer', i, ': BatchNorm')
             logging(logfile, [i, 'BatchNorm', layer_name])
+        elif layer_type == 'Pooling':
+            # logging
+            pool_type,kW,kH,dW,dH,pW,pH = parser.get_params(layer_name)
+            print('==> layer', i, ': Pooling')
+            logging(logfile, [i, 'Pooling', layer_name,pool_type,kW,kH,dW,dH,pW,pH])
+
 
     logfile.close()
-
-
-
-
 
 
 
@@ -112,13 +114,3 @@ if __name__ == '__main__':
 # running_mean = net.params[name][0].data
 # running_var = net.params[name][1].data
 # momentum = net.params[name][2].data
-
-
-
-#
-# w.shape
-# b.shape
-#
-# name
-#
-# net.blobs[name]

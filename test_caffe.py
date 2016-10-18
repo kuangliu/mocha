@@ -1,3 +1,6 @@
+import os
+os.environ['GLOG_minloglevel'] = '2' # hide debug log
+
 import caffe
 import numpy as np
 
