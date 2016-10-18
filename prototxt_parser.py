@@ -23,12 +23,13 @@ class PrototxtParser:
             print('find layer '+layer_name+' '+layer_type)
             if layer_type == 'Convolution':
                 param = layer.convolution_param
+                print(param.kernel_size)
                 kW = param.kernel_size[0] if len(param.kernel_size) else param.kernel_w
-                kH = param.kernel_size[1] if len(param.kernel_size) else param.kernel_h
+                kH = param.kernel_size[0] if len(param.kernel_size) else param.kernel_h
                 dW = param.stride[0] if len(param.stride) else param.stride_w
-                dH = param.stride[1] if len(param.stride) else param.stride_h
+                dH = param.stride[0] if len(param.stride) else param.stride_h
                 pW = param.pad[0] if len(param.pad) else param.pad_w
-                pH = param.pad[1] if len(param.pad) else param.pad_h
+                pH = param.pad[0] if len(param.pad) else param.pad_h
                 self.params[layer_name] = [kW,kH,dW,dH,pW,pH]
             elif layer_type == 'Pooling':
                 param = layer.pooling_param
