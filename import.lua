@@ -4,6 +4,7 @@
 require 'nn';
 require 'xlua';
 require 'paths';
+require 'pl.tablex'
 npy4th = require 'npy4th';
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -90,9 +91,32 @@ function pooling_layer(layer_name)
     return layer
 end
 
+--------------------------------------------------------
+-- New ReLU layer
+--
+function relu_layer()
+    return nn.ReLU(true)
+end
+
+--------------------------------------------------------
+-- New flatten layer
+--
+function flatten_layer()
+    return nn.View(-1)
+end
 
 -- get layers from log
 logfile = io.open('./params/net.log')
+
+-- map layer_type to it's layer processing function
+layerfunc = {
+    InnerProduct = linear_layer,
+    Convolution = conv_layer,
+    BatchNorm = bn_layer,
+    Pooling = pooling_layer,
+    ReLU = relu_layer,
+    Flatten = flatten_layer,
+}
 
 -- transfer saved params to net
 net = nn.Sequential()
@@ -110,26 +134,21 @@ while true do
     i = (i or 0) + 1
     print('==> layer '..i..': '..layer_type)
 
-    if layer_type == 'InnerProduct' then
-        if not flattened then -- flatten before adding linear layer
-            flattened = true
-            net:add(nn.View(-1))
-        end
-        net:add(linear_layer(layer_name))
-    elseif layer_type == 'Convolution' then
-        net:add(conv_layer(layer_name))
-    elseif layer_type == 'BatchNorm' then
-        net:add(bn_layer(layer_name))
-    elseif layer_type == 'Pooling' then
-        net:add(pooling_layer(layer_name))
-    elseif layer_type == 'ReLU' then
-        net:add(nn.ReLU(true))
-    elseif layer_type == 'Flatten' then
+    -- if not flattened, add flatten layer before linear layer
+    if not flattened and layer_type == 'InnerProduct' then
         net:add(nn.View(-1))
-        flattened = true  -- explicit flatten
-    else
-        print('[ERROR]'..layer_type..' not supported yet!')
+        flattened = true
     end
+
+    -- contains flatten layer, no need to automatically add it
+    if layer_type == 'Flatten' then flattened = true end
+
+    local getlayer = layerfunc[layer_type]
+    if not getlayer then error('[ERROR]'..layer_type..' not supported yet!') end
+
+    -- add new layer
+    local layer = getlayer(layer_name)
+    net:add(layer)
 end
 
 print(net)

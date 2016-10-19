@@ -16,7 +16,7 @@ def save_param(net, layer_name):
     - CONV, LINEAR, SCALE: save weight & bias.
     - BN: save running_mean & running_var.
 
-    Saving suffix:
+    Saving as:
     - weight/running_mean: as '.w.npy'.
     - bias/running_var: as '.b.npy'.
     '''
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     net = caffe.Net('./model/net.prototxt', './model/net.caffemodel', caffe.TEST)
 
     # mkdir for saving layer params and log file
-    save_dir = './params/'  # directory for saving params
+    save_dir = './params/'
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
 
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     for i in range(1, len(net.layers)):  # skip the Input layer (i=0)
         layer_type = net.layers[i].type
         layer_name = net._layer_names[i]
-        layer_config = []  # auxiliary param for logging
+        layer_config = []                # layer configs for logging
 
         # TODO: Add softmax
         if layer_type not in ['Input', 'InnerProduct', 'Convolution', 'BatchNorm', \

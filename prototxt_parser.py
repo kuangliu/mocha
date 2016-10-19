@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# PrototxtParser is for parsing CONV/POOL cfgs from .prototxt file
+# PrototxtParser is for parsing CONV/POOL configs from .prototxt file
 # using Google Protobuf API.
 #
 # ref: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
@@ -10,7 +10,13 @@ from google.protobuf import text_format
 
 
 class PrototxtParser:
-    '''Load a prototxt file and parse CONV/POOL cfgs out.'''
+    '''Load a prototxt file and parse CONV/POOL cfgs out.
+
+    Returns:
+    - For CONV: [kW,kH,dW,dH,pW,pH]
+    - For POOLING: [pool_type, kW,kH,dW,dH,pW,pH]
+        - pool_type = (0=MAX, 1=AVE, 2=STOCHATIC)
+    '''
     def __init__(self, prototxt):
         print('==> parse prototxt..')
         net = caffe_pb2.NetParameter()
@@ -23,7 +29,6 @@ class PrototxtParser:
             print('find layer '+layer_name+' '+layer_type)
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param
-                print(cfg.kernel_size)
                 kW = cfg.kernel_size[0] if len(cfg.kernel_size) else cfg.kernel_w
                 kH = cfg.kernel_size[0] if len(cfg.kernel_size) else cfg.kernel_h
                 dW = cfg.stride[0] if len(cfg.stride) else cfg.stride_w
@@ -45,19 +50,3 @@ class PrototxtParser:
     def get_config(self, layer_name):
         '''Return layer config.'''
         return self.config[layer_name]
-
-
-# prototxt = './model/net.t7.prototxt'
-# p = PrototxtParser('./model/net.t7.prototxt')
-# p.cfgs
-
-# net.layer[0].name
-# net.layer[1].name
-# net.layer[2].name
-# net.layer[3].name
-# net.layer[4].name
-#
-# layer = net.layer[3]
-# layer.
-
-# layer.pooling_cfg.AVE
