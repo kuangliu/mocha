@@ -14,8 +14,8 @@ torch.setdefaulttensortype('torch.FloatTensor')
 function load_params(layer_name)
     local param_dir = './params/'
     assert(paths.dirp(param_dir), param_dir..' Not Exist!')
-    local weight = npy4th.loadnpy(param_dir..layer_name..'.weight.npy')
-    local bias = npy4th.loadnpy(param_dir..layer_name..'.bias.npy')
+    local weight = npy4th.loadnpy(param_dir..layer_name..'.w.npy')
+    local bias = npy4th.loadnpy(param_dir..layer_name..'.b.npy')
     return weight, bias
 end
 
@@ -60,9 +60,7 @@ end
 --
 function bn_layer(layer_name)
     -- load params
-    local param_dir = './params/'
-    local running_mean = npy4th.loadnpy(param_dir..layer_name..'.mean.npy')
-    local running_var = npy4th.loadnpy(param_dir..layer_name..'.var.npy')
+    local running_mean, running_var = load_params(layer_name)
     -- define BN layer
     local nOutput = running_mean:size(1)
     local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, false) -- No affine
@@ -111,7 +109,8 @@ while true do
 
     i = (i or 0) + 1
     print('==> layer '..i..': '..layer_type)
-    if layer_type == 'Linear' then
+
+    if layer_type == 'InnerProduct' then
         if not flattened then -- flatten before adding linear layer
             flattened = true
             net:add(nn.View(-1))

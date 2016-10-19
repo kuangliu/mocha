@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# PrototxtParser is for parsing CONV/POOL params from .prototxt file
+# PrototxtParser is for parsing CONV/POOL cfgs from .prototxt file
 # using Google Protobuf API.
 #
 # ref: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
@@ -10,46 +10,46 @@ from google.protobuf import text_format
 
 
 class PrototxtParser:
-    '''Load a prototxt file and parse CONV/POOL params out.'''
+    '''Load a prototxt file and parse CONV/POOL cfgs out.'''
     def __init__(self, prototxt):
         print('==> parse prototxt..')
         net = caffe_pb2.NetParameter()
         text_format.Merge(open(prototxt,'r').read(), net)
-        self.params = {}
+        self.config = {}
 
         for layer in net.layer:
             layer_name = layer.name
             layer_type = layer.type
             print('find layer '+layer_name+' '+layer_type)
             if layer_type == 'Convolution':
-                param = layer.convolution_param
-                print(param.kernel_size)
-                kW = param.kernel_size[0] if len(param.kernel_size) else param.kernel_w
-                kH = param.kernel_size[0] if len(param.kernel_size) else param.kernel_h
-                dW = param.stride[0] if len(param.stride) else param.stride_w
-                dH = param.stride[0] if len(param.stride) else param.stride_h
-                pW = param.pad[0] if len(param.pad) else param.pad_w
-                pH = param.pad[0] if len(param.pad) else param.pad_h
-                self.params[layer_name] = [kW,kH,dW,dH,pW,pH]
+                cfg = layer.convolution_param
+                print(cfg.kernel_size)
+                kW = cfg.kernel_size[0] if len(cfg.kernel_size) else cfg.kernel_w
+                kH = cfg.kernel_size[0] if len(cfg.kernel_size) else cfg.kernel_h
+                dW = cfg.stride[0] if len(cfg.stride) else cfg.stride_w
+                dH = cfg.stride[0] if len(cfg.stride) else cfg.stride_h
+                pW = cfg.pad[0] if len(cfg.pad) else cfg.pad_w
+                pH = cfg.pad[0] if len(cfg.pad) else cfg.pad_h
+                self.config[layer_name] = [kW,kH,dW,dH,pW,pH]
             elif layer_type == 'Pooling':
-                param = layer.pooling_param
-                pool_type = param.pool  # MAX=0, AVE=1, STOCHASTIC=2
-                kW = param.kernel_size if param.kernel_size else param.kernel_w
-                kH = param.kernel_size if param.kernel_size else param.kernel_h
-                dW = param.stride if param.stride else param.stride_w
-                dH = param.stride if param.stride else param.stride_h
-                pW = param.pad if param.pad else param.pad_w
-                pH = param.pad if param.pad else param.pad_h
-                self.params[layer_name] = [pool_type,kW,kH,dW,dH,pW,pH]
+                cfg = layer.pooling_param
+                pool_type = cfg.pool  # MAX=0, AVE=1, STOCHASTIC=2
+                kW = cfg.kernel_size if cfg.kernel_size else cfg.kernel_w
+                kH = cfg.kernel_size if cfg.kernel_size else cfg.kernel_h
+                dW = cfg.stride if cfg.stride else cfg.stride_w
+                dH = cfg.stride if cfg.stride else cfg.stride_h
+                pW = cfg.pad if cfg.pad else cfg.pad_w
+                pH = cfg.pad if cfg.pad else cfg.pad_h
+                self.config[layer_name] = [pool_type,kW,kH,dW,dH,pW,pH]
 
-    def get_params(self, layer_name):
-        '''Return layer params.'''
-        return self.params[layer_name]
+    def get_config(self, layer_name):
+        '''Return layer config.'''
+        return self.config[layer_name]
 
 
 # prototxt = './model/net.t7.prototxt'
 # p = PrototxtParser('./model/net.t7.prototxt')
-# p.params
+# p.cfgs
 
 # net.layer[0].name
 # net.layer[1].name
@@ -60,4 +60,4 @@ class PrototxtParser:
 # layer = net.layer[3]
 # layer.
 
-# layer.pooling_param.AVE
+# layer.pooling_cfg.AVE

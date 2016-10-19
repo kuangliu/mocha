@@ -9,43 +9,31 @@ import numpy as np
 from prototxt_parser import PrototxtParser
 
 
-def save_linear(net, layer_name, save_dir):
-    '''Save linear layer params to disk.
+def save_param(net, layer_name):
+    '''Save layer params to disk.
 
-    Returns:
-        input_size: input dim of linear layer
-        output_size: output dim of linear layer
+    For layer:
+    - CONV, LINEAR, SCALE: save weight & bias.
+    - BN: save running_mean & running_var.
+
+    Saving suffix:
+    - weight/running_mean: as '.w.npy'.
+    - bias/running_var: as '.b.npy'.
     '''
-    weight = net.params[layer_name][0].data
-    bias = net.params[layer_name][1].data
-    input_size = weight.shape[1]
-    output_size = weight.shape[0]
-    # save params
-    np.save(save_dir+layer_name+'.weight', weight)
-    np.save(save_dir+layer_name+'.bias', bias)
-    return input_size, output_size
-
-def save_conv(net, layer_name, save_dir):
-    '''Save conv layer params to disk.'''
-    weight = net.params[layer_name][0].data
-    bias = net.params[layer_name][1].data
-    np.save(save_dir+layer_name+'.weight', weight)
-    np.save(save_dir+layer_name+'.bias', bias)
-
-def save_bn(net, layer_name, save_dir):
-    '''Save bn layer params to disk.'''
-    running_mean = net.params[layer_name][0].data
-    running_var = net.params[layer_name][1].data
-    # momentum = net.params[layer_name][2].data
-    np.save(save_dir+layer_name+'.mean', running_mean)
-    np.save(save_dir+layer_name+'.var', running_var)
+    weight = net.params[layer_name][0].data # for bn, weight is running_mean
+    bias = net.params[layer_name][1].data   # for bn, bias is running_var
+    np.save('./params/'+layer_name+'.w', weight)
+    np.save('./params/'+layer_name+'.b', bias)
 
 def logging(file, L):
     '''Write list content to log.'''
-    s = ''
-    for x in L:
-        s = s + str(x) + '\t'
-    file.write(s+'\n')
+    L = [str(x) for x in L]
+    file.write('\t'.join(L)+'\n')
+
+def println(L):
+    '''Print list content to out'''
+    L = [str(x) for x in L]
+    print(' '.join(L))
 
 if __name__ == '__main__':
     # 1. define .prototxt parser
@@ -55,7 +43,7 @@ if __name__ == '__main__':
     net = caffe.Net('./model/net.prototxt', './model/net.caffemodel', caffe.TEST)
 
     # mkdir for saving layer params and log file
-    save_dir = './params/'
+    save_dir = './params/'  # directory for saving params
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
 
@@ -63,50 +51,29 @@ if __name__ == '__main__':
 
     # 3. parse params layer by layer
     print('\nexporting..')
-    for i in range(len(net.layers)):
+    for i in range(1, len(net.layers)):  # skip the Input layer (i=0)
         layer_type = net.layers[i].type
         layer_name = net._layer_names[i]
+        layer_config = []  # auxiliary param for logging
 
-        if layer_type == 'Input':
-            pass
-        elif layer_type == 'InnerProduct':
-            input_size, output_size = save_linear(net, layer_name, save_dir)
-            print('==> layer', i, ': Linear [', str(input_size), '->', str(output_size), ']')
-            logging(logfile, [i, 'Linear', layer_name])
-        elif layer_type == 'ReLU':
-            print('==> layer', str(i), ': ReLU')
-            logging(logfile, [i, 'ReLU', layer_name])
-        elif layer_type == 'Flatten':
-            print('==> layer', i, ': Flatten')
-            logging(logfile, [i, 'Flatten', layer_name])
-        elif layer_type == 'Convolution':
-            save_conv(net, layer_name, save_dir)
-            kW,kH,dW,dH,pW,pH = parser.get_params(layer_name)
-            print('==> layer', i, ': Convolution [', kW,kH,dW,dH,pW,pH, ']')
-            logging(logfile, [i, 'Convolution', layer_name, kW,kH,dW,dH,pW,pH])
-        elif layer_type == 'BatchNorm':
-            save_bn(net, layer_name, save_dir)
-            print('==> layer', i, ': BatchNorm')
-            logging(logfile, [i, 'BatchNorm', layer_name])
-        elif layer_type == 'Pooling':
-            pool_type,kW,kH,dW,dH,pW,pH = parser.get_params(layer_name)
-            print('==> layer', i, ': Pooling')
-            logging(logfile, [i, 'Pooling', layer_name,pool_type,kW,kH,dW,dH,pW,pH])
-        else:
-            #TODO: Add softmax
-            print('[ERROR]'+layer_type+' not supported yet!')
-            assert False
+        # TODO: Add softmax
+        if layer_type not in ['Input', 'InnerProduct', 'Convolution', 'BatchNorm', \
+                                'Scale', 'ReLU', 'Pooling', 'Flatten']:
+            raise Exception(layer_type+' layer not supported yet!')
+
+        # save layers params
+        if layer_type in ['InnerProduct', 'Convolution', 'BatchNorm', 'Scale']:
+            save_param(net, layer_name)
+
+        # get layer config from prototxt
+        if layer_type in ['Convolution', 'Pooling']:
+            layer_config = parser.get_config(layer_name)
+
+        # printing
+        print('==> layer', i, ':', layer_type)
+
+        # logging
+        info = [i, layer_type, layer_name]
+        logging(logfile, info + layer_config)
 
     logfile.close()
-
-
-
-#
-# net._layer_names[2]
-# net.layers[2].type
-#
-# name = net._layer_names[2]
-#
-# running_mean = net.params[name][0].data
-# running_var = net.params[name][1].data
-# momentum = net.params[name][2].data
