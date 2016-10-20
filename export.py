@@ -56,9 +56,8 @@ if __name__ == '__main__':
         layer_name = net._layer_names[i]
         layer_config = []                # layer configs for logging
 
-        # TODO: Add softmax
-        if layer_type not in ['Input', 'InnerProduct', 'Convolution', 'BatchNorm', \
-                                'Scale', 'ReLU', 'Pooling', 'Flatten', 'Softmax']:
+        if layer_type not in ['Input', 'Convolution', 'BatchNorm', 'Scale', 'ReLU', \
+                              'Pooling', 'Flatten', 'InnerProduct', 'Softmax']:
             raise Exception(layer_type+' layer not supported yet!')
 
         # save layers params

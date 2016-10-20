@@ -56,17 +56,34 @@ end
 
 --------------------------------------------------------
 -- New bn layer
+-- if BatchNorm followed by Scale in caffemodel, affine=true
+-- if BatchNorm with no Scale, affine=false
 --
 function bn_layer(layer_name)
     -- load params
     local running_mean, running_var = load_params(layer_name)
     -- define BN layer
     local nOutput = running_mean:size(1)
-    local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, false) -- No affine
+    -- default assume [BN-Scale] in caffemodel, which affine=true
+    local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, true)
     -- copy params
     layer.running_mean:copy(running_mean)
     layer.running_var:copy(running_var)
     return layer
+end
+
+--------------------------------------------------------
+-- New scale layer
+--  - if the previous layer is BN, merge the weight/bias
+--  - if not... TODO
+--
+function scale_layer(layer_name)
+    local weight, bias = load_params(layer_name)
+    local lastbn = net:get(#net)
+    assert(torch.type(lastbn) == 'nn.SpatialBatchNormalization',
+                'Scale must follow BatchNorm.')
+    lastbn.weight:copy(weight)
+    lastbn.bias:copy(bias)
 end
 
 --------------------------------------------------------
@@ -110,7 +127,6 @@ function softmax_layer()
     return nn.SoftMax()
 end
 
-
 -- get layers from log
 logfile = io.open('./params/net.log')
 
@@ -118,6 +134,7 @@ logfile = io.open('./params/net.log')
 layerfunc = {
     Convolution = conv_layer,
     BatchNorm = bn_layer,
+    Scale = scale_layer,
     ReLU = relu_layer,
     Pooling = pooling_layer,
     Flatten = flatten_layer,
@@ -157,7 +174,7 @@ while true do
     end
 
     local layer = getlayer(layer_name)
-    net:add(layer)
+    if layer then net:add(layer) end    -- for scale layer, may return nil
 end
 
 print(net)
