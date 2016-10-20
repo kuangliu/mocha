@@ -1,4 +1,4 @@
-# Mocha: convert torch model to/from caffe model easily.
+# Mocha: convert torch model to/from caffe model easily
 Caffe: load with Python.  
 Torch: load with Lua.
 

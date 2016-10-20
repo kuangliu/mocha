@@ -10,7 +10,7 @@ from google.protobuf import text_format
 
 
 class PrototxtParser:
-    '''Load a prototxt file and parse CONV/POOL cfgs out.
+    '''Load a prototxt file and parse CONV/POOL configs out.
 
     Returns:
     - For CONV: [kW,kH,dW,dH,pW,pH]

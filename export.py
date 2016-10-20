@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         # TODO: Add softmax
         if layer_type not in ['Input', 'InnerProduct', 'Convolution', 'BatchNorm', \
-                                'Scale', 'ReLU', 'Pooling', 'Flatten']:
+                                'Scale', 'ReLU', 'Pooling', 'Flatten', 'Softmax']:
             raise Exception(layer_type+' layer not supported yet!')
 
         # save layers params

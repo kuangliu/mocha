@@ -4,7 +4,6 @@
 require 'nn';
 require 'xlua';
 require 'paths';
-require 'pl.tablex'
 npy4th = require 'npy4th';
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -24,7 +23,6 @@ end
 -- New linear layer
 --
 function linear_layer(layer_name)
-    -- TODO: automatically add nn.View(-1)
     -- load params
     local weight, bias = load_params(layer_name)
     -- define linear layer
@@ -105,17 +103,26 @@ function flatten_layer()
     return nn.View(-1)
 end
 
+--------------------------------------------------------
+-- New softmax layer
+--
+function softmax_layer()
+    return nn.SoftMax()
+end
+
+
 -- get layers from log
 logfile = io.open('./params/net.log')
 
--- map layer_type to it's layer processing function
+-- map layer_type to it's processing function
 layerfunc = {
-    InnerProduct = linear_layer,
     Convolution = conv_layer,
     BatchNorm = bn_layer,
-    Pooling = pooling_layer,
     ReLU = relu_layer,
+    Pooling = pooling_layer,
     Flatten = flatten_layer,
+    InnerProduct = linear_layer,
+    Softmax = softmax_layer,
 }
 
 -- transfer saved params to net
@@ -134,7 +141,7 @@ while true do
     i = (i or 0) + 1
     print('==> layer '..i..': '..layer_type)
 
-    -- if not flattened, add flatten layer before linear layer
+    -- if not flattened, add a flatten layer before any linear layers
     if not flattened and layer_type == 'InnerProduct' then
         net:add(nn.View(-1))
         flattened = true
@@ -143,10 +150,12 @@ while true do
     -- contains flatten layer, no need to automatically add it
     if layer_type == 'Flatten' then flattened = true end
 
+    -- add a new layer
     local getlayer = layerfunc[layer_type]
-    if not getlayer then error('[ERROR]'..layer_type..' not supported yet!') end
+    if not getlayer then
+        error('[ERROR]'..layer_type..' not supported yet!')
+    end
 
-    -- add new layer
     local layer = getlayer(layer_name)
     net:add(layer)
 end
