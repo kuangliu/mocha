@@ -4,6 +4,8 @@
 from __future__ import print_function
 
 import os
+os.environ['GLOG_minloglevel'] = '2' # hide debug log
+
 import caffe
 import numpy as np
 from prototxt_parser import PrototxtParser
@@ -36,11 +38,16 @@ def println(L):
     print(' '.join(L))
 
 if __name__ == '__main__':
+    # prototxt = './model/net.prototxt'
+    # binary = './model/net.caffemodel'
+    prototxt = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE_deploy.prototxt'
+    binary = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE.caffemodel'
+
     # 1. define .prototxt parser
-    parser = PrototxtParser('./model/net.prototxt')
+    parser = PrototxtParser(prototxt)
 
     # 2. load caffe model
-    net = caffe.Net('./model/net.prototxt', './model/net.caffemodel', caffe.TEST)
+    net = caffe.Net(prototxt, binary, caffe.TEST)
 
     # mkdir for saving layer params and log file
     save_dir = './params/'
@@ -57,7 +64,7 @@ if __name__ == '__main__':
         layer_config = []                # layer configs for logging
 
         if layer_type not in ['Input', 'Convolution', 'BatchNorm', 'Scale', 'ReLU', \
-                              'Pooling', 'Flatten', 'InnerProduct', 'Softmax']:
+                              'Pooling', 'Flatten', 'InnerProduct', 'Dropout', 'Softmax']:
             raise Exception(layer_type+' layer not supported yet!')
 
         # save layers params
@@ -65,7 +72,7 @@ if __name__ == '__main__':
             save_param(net, layer_name)
 
         # get layer config from prototxt
-        if layer_type in ['Convolution', 'Pooling']:
+        if layer_type in ['Convolution', 'Pooling', 'Dropout']:
             layer_config = parser.get_config(layer_name)
 
         # printing

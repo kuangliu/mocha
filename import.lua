@@ -121,6 +121,14 @@ function flatten_layer()
 end
 
 --------------------------------------------------------
+-- New dropout layer
+--
+function dropout_layer()
+    local p = tonumber(splited[4])
+    return nn.Dropout(p)
+end
+
+--------------------------------------------------------
 -- New softmax layer
 --
 function softmax_layer()
@@ -139,6 +147,7 @@ layerfunc = {
     Pooling = pooling_layer,
     Flatten = flatten_layer,
     InnerProduct = linear_layer,
+    Dropout = dropout_layer,
     Softmax = softmax_layer,
 }
 
@@ -183,6 +192,8 @@ torch.save('net.t7', net)
 -- test
 print('testing..')
 net:evaluate()
-x = torch.randn(1,1,28,28)
+x = torch.randn(1,3,224,224)
+npy4th.savenpy('x.npy',x)
+
 y = net:float():forward(x:float())
-print(y)
+torch.save('y_torch.t7', y)

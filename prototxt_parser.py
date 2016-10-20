@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# PrototxtParser is for parsing CONV/POOL configs from .prototxt file
+# PrototxtParser is for parsing CONV/POOL/DROPOUT configs from .prototxt file
 # using Google Protobuf API.
 #
 # ref: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
@@ -21,8 +21,8 @@ class PrototxtParser:
         print('==> parse prototxt..')
         net = caffe_pb2.NetParameter()
         text_format.Merge(open(prototxt,'r').read(), net)
-        self.config = {}
 
+        self.config = {}
         for layer in net.layer:
             layer_name = layer.name
             layer_type = layer.type
@@ -35,6 +35,8 @@ class PrototxtParser:
                 dH = cfg.stride[0] if len(cfg.stride) else cfg.stride_h
                 pW = cfg.pad[0] if len(cfg.pad) else cfg.pad_w
                 pH = cfg.pad[0] if len(cfg.pad) else cfg.pad_h
+                dW = dW if dW else 1    # set default stride=1
+                dH = dH if dH else 1
                 self.config[layer_name] = [kW,kH,dW,dH,pW,pH]
             elif layer_type == 'Pooling':
                 cfg = layer.pooling_param
@@ -45,7 +47,12 @@ class PrototxtParser:
                 dH = cfg.stride if cfg.stride else cfg.stride_h
                 pW = cfg.pad if cfg.pad else cfg.pad_w
                 pH = cfg.pad if cfg.pad else cfg.pad_h
+                dW = dW if dW else 1    # set default stride=1
+                dH = dH if dH else 1
                 self.config[layer_name] = [pool_type,kW,kH,dW,dH,pW,pH]
+            elif layer_type == 'Dropout':
+                p = layer.dropout_param.dropout_ratio
+                self.config[layer_name] = [p]
 
     def get_config(self, layer_name):
         '''Return layer config.'''
