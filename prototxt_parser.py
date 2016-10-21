@@ -2,6 +2,10 @@
 # PrototxtParser is for parsing CONV/POOL/DROPOUT configs from .prototxt file
 # using Google Protobuf API.
 #
+# The .prototxt layer must start with 'layer {...}'.
+# The layer type must be string, as described in:
+#   http://caffe.berkeleyvision.org/tutorial/layers.html
+#
 # ref: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
 # -----------------------------------------------------------------------------
 
@@ -10,12 +14,13 @@ from google.protobuf import text_format
 
 
 class PrototxtParser:
-    '''Load a prototxt file and parse CONV/POOL configs out.
+    '''Load a prototxt file and parse CONV/POOL/DROPOUT configs out.
 
     Returns:
     - For CONV: [kW,kH,dW,dH,pW,pH]
     - For POOLING: [pool_type, kW,kH,dW,dH,pW,pH]
-        - pool_type = (0=MAX, 1=AVE, 2=STOCHATIC)
+        - pool_type = (0=MAX, 1=AVE, 2=STOCHASTIC)
+    - For DROPOUT: [drop_ratio]
     '''
     def __init__(self, prototxt):
         print('==> parse prototxt..')
@@ -26,7 +31,9 @@ class PrototxtParser:
         for layer in net.layer:
             layer_name = layer.name
             layer_type = layer.type
+            assert type(layer_type==str), 'Only string layer type supported!'
             print('find layer '+layer_name+' '+layer_type)
+
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param
                 kW = cfg.kernel_size[0] if len(cfg.kernel_size) else cfg.kernel_w

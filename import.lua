@@ -14,8 +14,11 @@ torch.setdefaulttensortype('torch.FloatTensor')
 function load_params(layer_name)
     local param_dir = './params/'
     assert(paths.dirp(param_dir), param_dir..' Not Exist!')
+    -- weight is compulsive
     local weight = npy4th.loadnpy(param_dir..layer_name..'.w.npy')
-    local bias = npy4th.loadnpy(param_dir..layer_name..'.b.npy')
+    -- bias is optional
+    local bias_path = param_dir..layer_name..'.b.npy'
+    local bias = paths.filep(bias_path) and npy4th.loadnpy(bias_path) or nil
     return weight, bias
 end
 
@@ -50,7 +53,11 @@ function conv_layer(layer_name)
     local layer = nn.SpatialConvolution(nInputPlane, nOutputPlane, kW,kH,dW,dH,pW,pH)
     -- copy params
     layer.weight:copy(weight)
-    layer.bias:copy(bias)
+    if bias then
+        layer.bias:copy(bias)
+    else
+        layer:noBias()
+    end
     return layer
 end
 

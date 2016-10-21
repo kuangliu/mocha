@@ -15,17 +15,22 @@ def save_param(net, layer_name):
     '''Save layer params to disk.
 
     For layer:
-    - CONV, LINEAR, SCALE: save weight & bias.
+    - CONV, LINEAR, SCALE: save weight & bias (optional).
     - BN: save running_mean & running_var.
 
     Saving as:
     - weight/running_mean: as '.w.npy'.
     - bias/running_var: as '.b.npy'.
     '''
-    weight = net.params[layer_name][0].data # for bn, weight is running_mean
-    bias = net.params[layer_name][1].data   # for bn, bias is running_var
-    np.save('./params/'+layer_name+'.w', weight)
-    np.save('./params/'+layer_name+'.b', bias)
+    N = len(net.params[layer_name])
+    assert N > 0, 'No param in layer ' + layer_name
+    # save weight
+    weight = net.params[layer_name][0].data
+    np.save('./params/' + layer_name + '.w', weight)
+    # save bias (if have)
+    if N > 1:
+        bias = net.params[layer_name][1].data
+        np.save('./params/' + layer_name + '.b', bias)
 
 def logging(file, L):
     '''Write list content to log.'''
@@ -40,8 +45,10 @@ def println(L):
 if __name__ == '__main__':
     # prototxt = './model/net.prototxt'
     # binary = './model/net.caffemodel'
-    prototxt = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE_deploy.prototxt'
-    binary = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE.caffemodel'
+    # prototxt = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE_deploy.prototxt'
+    # binary = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE.caffemodel'
+    prototxt = '/home/luke/workspace/child/model/child.prototxt'
+    binary = '/home/luke/workspace/child/model/child.caffemodel'
 
     # 1. define .prototxt parser
     parser = PrototxtParser(prototxt)
@@ -62,6 +69,8 @@ if __name__ == '__main__':
         layer_type = net.layers[i].type
         layer_name = net._layer_names[i]
         layer_config = []                # layer configs for logging
+
+        print(layer_type, layer_name)
 
         if layer_type not in ['Input', 'Convolution', 'BatchNorm', 'Scale', 'ReLU', \
                               'Pooling', 'Flatten', 'InnerProduct', 'Dropout', 'Softmax']:
