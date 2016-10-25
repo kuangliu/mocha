@@ -142,9 +142,6 @@ function softmax_layer()
     return nn.SoftMax()
 end
 
--- get layers from log
-logfile = io.open('./params/net.log')
-
 -- map layer_type to it's processing function
 layerfunc = {
     Convolution = conv_layer,
@@ -158,9 +155,12 @@ layerfunc = {
     Softmax = softmax_layer,
 }
 
+-- get layers from log
+logfile = io.open('./params/net.log')
+
 -- transfer saved params to net
 net = nn.Sequential()
--- need flatten before adding any linear layer
+-- need flatten before adding any linear layers
 flattened = false
 print('importing..')
 while true do
@@ -199,8 +199,9 @@ torch.save('net.t7', net)
 -- test
 print('testing..')
 net:evaluate()
-x = torch.randn(1,3,224,224)
+x = torch.randn(1,1,28,28)
 npy4th.savenpy('x.npy',x)
 
 y = net:float():forward(x:float())
+print(y)
 torch.save('y_torch.t7', y)
