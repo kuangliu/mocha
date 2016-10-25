@@ -76,11 +76,11 @@ if __name__ == '__main__':
             raise TypeError(layer_type + ' layer not supported yet!')
 
         # save layers params
-        if layer_type in ['InnerProduct', 'Convolution', 'BatchNorm', 'Scale']:
+        if layer_type in ['Convolution', 'BatchNorm', 'Scale', 'InnerProduct']:
             save_param(net, layer_name)
 
         # get layer config from prototxt
-        if layer_type in ['Convolution', 'Pooling', 'Dropout']:
+        if layer_type in ['Convolution', 'Pooling', 'Dropout', 'InnerProduct']:
             layer_config = parser.get_config(layer_name)
 
         # printing

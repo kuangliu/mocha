@@ -47,9 +47,9 @@ function conv_layer(layer_name)
     -- define conv layer
     local nInputPlane = weight:size(2)
     local nOutputPlane = weight:size(1)
-    local kW,kH = tonumber(splited[4]),tonumber(splited[5])
-    local dW,dH = tonumber(splited[6]),tonumber(splited[7])
-    local pW,pH = tonumber(splited[8]),tonumber(splited[9])
+    local kW,kH = tonumber(splited[5]),tonumber(splited[6])
+    local dW,dH = tonumber(splited[7]),tonumber(splited[8])
+    local pW,pH = tonumber(splited[9]),tonumber(splited[10])
     local layer = nn.SpatialConvolution(nInputPlane, nOutputPlane, kW,kH,dW,dH,pW,pH)
     -- copy params
     layer.weight:copy(weight)
