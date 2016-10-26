@@ -31,7 +31,7 @@ function logging(idx, layer_type, layer_name, cfg)
 end
 
 ---------------------------------------------------------------
--- Save conv weight & bias.
+-- Save conv layer params.
 --
 function conv_layer(layer, idx)
     local layer_name = 'conv'..idx
@@ -40,7 +40,7 @@ function conv_layer(layer, idx)
     local nOutput = layer.nOutputPlane
     local kW,kH = layer.kW,layer.kH
     local dW,dH = layer.dW,layer.dH
-    local pW,pH = layer.pW,layer.pH
+    local pW,pH = layer.padW,layer.padH
     local cfg = {nOutput, kW,kH,dW,dH,pW,pH}
     logging(idx, 'Convolution', layer_name, cfg)
 end
@@ -62,17 +62,23 @@ function bn_layer(layer, idx)
     logging(idx, 'Scale', layer_name)
 end
 
+---------------------------------------------------------------
+-- Logging pooling layer configs.
+--
 function pooling_layer(layer, idx)
     local layer_name = 'pool'..idx
 
     local pool_type = torch.type(layer)=='nn.SpatialMaxPooling' and 0 or 1
     local kW,kH = layer.kW,layer.kH
     local dW,dH = layer.dW,layer.dH
-    local pW,pH = layer.pW,layer.pH
+    local pW,pH = layer.padW,layer.padH
     local cfg = {pool_type, kW,kH,dW,dH,pW,pH}
     logging(idx, 'Pooling', layer_name, cfg)
 end
 
+---------------------------------------------------------------
+-- Save linear layer params.
+--
 function linear_layer(layer, idx)
     local layer_name = 'linear'..idx
     save_param(layer_name, layer.weight, layer.bias)
@@ -81,6 +87,9 @@ function linear_layer(layer, idx)
     logging(idx, 'InnerProduct', layer_name, {nOutput})
 end
 
+---------------------------------------------------------------
+-- For layer has no param or config, just logging.
+--
 function noparam_layer(layer, idx)
     local layer_name
     if torch.type(layer) == 'nn.ReLU' then

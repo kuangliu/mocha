@@ -105,7 +105,7 @@ def build_prototxt(input_size):
         get_layer = layer_func.get(layer_type)
         if not get_layer:
             raise TypeError(layer_type + ' not supported yet!')
-
+        print(layer_type)
         layer = get_layer(layer_name, bottom_name, [int(x) for x in splited[3:]])
         net[layer_name] = layer
 
