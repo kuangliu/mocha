@@ -68,10 +68,10 @@ def build_prototxt(input_size):
     '''Build a new prototxt based on log file.
 
     Args:
-        input_size: list containing 4 numbers indicating network input size.
-        e.g. input_size=[1,1,28,28]
+     - input_size: list containing 4 numbers indicating network input size.
+                   e.g. input_size=[1,1,28,28]
 
-    Saving as 'cvt_net.prototxt'.
+    Save as 'cvt_net.prototxt'.
     '''
     print('==> building prototxt..')
 
@@ -122,8 +122,8 @@ def load_params(layer_name):
     '''Load saved layer params.
 
     Returns:
-        weight: weight/running_mean/None
-        bias: bias/running_var/None
+     - weight: weight/running_mean/None
+     - bias: bias/running_var/None
     '''
     param_dir = './params/'
     weight_path = param_dir+layer_name+'.w.npy'

@@ -1,6 +1,7 @@
 ------------------------------------------------------------------
--- Reconstruct a Torch model from saved layer params and log file.
+-- Rebuild a Torch model from saved layer params and log file.
 ------------------------------------------------------------------
+
 require 'nn';
 require 'xlua';
 require 'paths';
@@ -13,7 +14,7 @@ torch.setdefaulttensortype('torch.FloatTensor')
 --
 function load_params(layer_name)
     local param_dir = './params/'
-    assert(paths.dirp(param_dir), param_dir..' Not Exist!')
+    assert(paths.dirp(param_dir), param_dir..' not exist!')
     -- weight is compulsive
     local weight = npy4th.loadnpy(param_dir..layer_name..'.w.npy')
     -- bias is optional
@@ -162,7 +163,7 @@ logfile = io.open('./params/net.log')
 net = nn.Sequential()
 -- need flatten before adding any linear layers
 flattened = false
-print('importing..')
+print('==> importing..')
 while true do
     local line = logfile:read('*l')
     if not line then break end
@@ -172,7 +173,7 @@ while true do
     local layer_name = splited[3]
 
     i = (i or 0) + 1
-    print('==> layer '..i..': '..layer_type)
+    print('... layer '..i..': '..layer_type)
 
     -- if not flattened, add a flatten layer before any linear layers
     if not flattened and layer_type == 'InnerProduct' then
@@ -190,7 +191,7 @@ while true do
     end
 
     local layer = getlayer(layer_name)
-    if layer then net:add(layer) end    -- for scale layer, may return nil
+    if layer then net:add(layer) end    -- scale layer returns nil
 end
 
 print(net)

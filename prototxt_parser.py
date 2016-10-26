@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
-# PrototxtParser is for parsing CONV/POOL/DROPOUT/LINEAR configs from .prototxt file
-# using Google Protobuf API.
+# PrototxtParser is for parsing layer configs from .prototxt file using
+# Google Protobuf API.
 #
 # The .prototxt layer must start with 'layer {...}'.
 # The layer type must be string, as described in:
@@ -17,11 +17,11 @@ class PrototxtParser:
     '''Load a prototxt file and parse CONV/POOL/DROPOUT configs out.
 
     Returns:
-    - CONV: [num_output, kW,kH,dW,dH,pW,pH]
-    - POOLING: [pool_type, kW,kH,dW,dH,pW,pH]
+     - CONV: [num_output, kW,kH,dW,dH,pW,pH]
+     - POOLING: [pool_type, kW,kH,dW,dH,pW,pH]
         - pool_type = (0=MAX, 1=AVE, 2=STOCHASTIC)
-    - DROPOUT: [drop_ratio]
-    - InnerProduct: [num_output]
+     - DROPOUT: [drop_ratio]
+     - InnerProduct: [num_output]
     '''
     def __init__(self, prototxt):
         print('==> parse prototxt..')
