@@ -1,5 +1,5 @@
 ------------------------------------------------------------------
--- Export layer params of a torch model to disk.
+-- Export torch model layer params to disk.
 ------------------------------------------------------------------
 
 require 'nn';
@@ -10,7 +10,7 @@ npy4th = require 'npy4th';
 torch.setdefaulttensortype('torch.FloatTensor')
 
 ---------------------------------------------------------------
--- Save weight & bias to disk as save_name.w/b.npy
+-- Save weight & bias to disk as *.w/b.npy
 --
 function save_param(save_name, weight, bias)
     npy4th.savenpy(save_dir..save_name..'.w.npy', weight)
@@ -18,7 +18,7 @@ function save_param(save_name, weight, bias)
 end
 
 ---------------------------------------------------------------
--- Write layer info to log file.
+-- Write layer config to config file.
 --
 function logging(idx, layer_type, layer_name, cfg)
     local s = idx..'\t'..layer_type..'\t'..layer_name
@@ -27,7 +27,7 @@ function logging(idx, layer_type, layer_name, cfg)
     for _,v in pairs(cfg) do
         s = s .. '\t' .. v
     end
-    logfile:write(s..'\n')
+    cfgfile:write(s..'\n')
 end
 
 ---------------------------------------------------------------
@@ -46,7 +46,7 @@ function conv_layer(layer, idx)
 end
 
 ---------------------------------------------------------------
--- Save an runing_mean&running_var, and split weight & bias out.
+-- Save bn runing_mean&running_var, and split weight & bias out.
 -- The reason for doing this is caffe uses BN+Scale to achieve
 -- the full torch BN functionality.
 --
@@ -110,7 +110,7 @@ paths.mkdir(save_dir)
 -- load torch model
 net = torch.load('./net.t7')
 
-logfile = io.open(save_dir..'net.log', 'w')
+cfgfile = io.open(save_dir..'net.config', 'w')
 
 -- map layer type to it's saving function
 layerfunc = {
@@ -124,9 +124,11 @@ layerfunc = {
     ['nn.SoftMax'] = noparam_layer,
 }
 
+print('==> exporting..')
 for i = 1,#net do
     layer = net:get(i)
     layer_type = torch.type(layer)
+    print('... '..'layer '..i..' : '..layer_type)
 
     save_layer = layerfunc[layer_type]
     if not save_layer then
@@ -135,4 +137,4 @@ for i = 1,#net do
     save_layer(layer, i)
 end
 
-logfile:close()
+cfgfile:close()

@@ -95,8 +95,8 @@ def build_prototxt(input_size):
 
     # other layers based on log file
     param_dir = './params/'
-    log_file = open(param_dir + 'net.log', 'r')
-    for line in log_file.readlines():
+    cfg_file = open(param_dir + 'net.config', 'r')
+    for line in cfg_file.readlines():
         splited = line.strip().split()
         layer_type = splited[1]
         layer_name = splited[2]
@@ -105,7 +105,7 @@ def build_prototxt(input_size):
         get_layer = layer_func.get(layer_type)
         if not get_layer:
             raise TypeError(layer_type + ' not supported yet!')
-        print(layer_type)
+
         layer = get_layer(layer_name, bottom_name, [int(x) for x in splited[3:]])
         net[layer_name] = layer
 
@@ -122,8 +122,8 @@ def load_params(layer_name):
     '''Load saved layer params.
 
     Returns:
-     - weight: weight/running_mean/None
-     - bias: bias/running_var/None
+     - weight: weight / running_mean / None
+     - bias:   bias   / running_var  / None
     '''
     param_dir = './params/'
     weight_path = param_dir+layer_name+'.w.npy'

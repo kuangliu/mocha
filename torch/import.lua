@@ -1,5 +1,5 @@
 ------------------------------------------------------------------
--- Rebuild a Torch model from saved layer params and log file.
+-- Rebuild torch model from saved layer params and config file.
 ------------------------------------------------------------------
 
 require 'nn';
@@ -156,8 +156,8 @@ layerfunc = {
     Softmax = softmax_layer,
 }
 
--- get layers from log
-logfile = io.open('./params/net.log')
+-- get layers from config file
+cfgfile = io.open('./params/net.config')
 
 -- transfer saved params to net
 net = nn.Sequential()
@@ -165,7 +165,7 @@ net = nn.Sequential()
 flattened = false
 print('==> importing..')
 while true do
-    local line = logfile:read('*l')
+    local line = cfgfile:read('*l')
     if not line then break end
 
     splited = string.split(line, '\t')

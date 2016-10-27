@@ -1,5 +1,5 @@
 #---------------------------------------------------------------
-# Export layer params of a caffemodel to disk.
+# Export caffe model layer params to disk.
 #---------------------------------------------------------------
 
 from __future__ import print_function
@@ -21,7 +21,7 @@ def save_param(net, layer_name):
       - CONV, LINEAR, SCALE: save weight & bias (optional).
       - BN: save running_mean & running_var.
 
-    Saving as:
+    Save:
       - weight/running_mean: as '.w.npy'.
       - bias/running_var: as '.b.npy'.
     '''
@@ -36,17 +36,12 @@ def save_param(net, layer_name):
         np.save(save_dir + layer_name + '.b', bias)
 
 def logging(file, L):
-    '''Write list content to log.'''
+    '''Write list content to file.'''
     L = [str(x) for x in L]
     file.write('\t'.join(L)+'\n')
 
-def println(L):
-    '''Print list content to out'''
-    L = [str(x) for x in L]
-    print(' '.join(L))
-
 if __name__ == '__main__':
-    # mkdir for saving layer params and log file
+    # mkdir for saving layer params and config file
     save_dir = './params/'
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
@@ -63,7 +58,7 @@ if __name__ == '__main__':
     net = caffe.Net(prototxt, binary, caffe.TEST)
 
     # 3. parse params layer by layer
-    logfile = open(save_dir+'net.log', 'w')
+    cfg_file = open(save_dir+'net.config', 'w')
     print('\n==> exporting..')
     for i in range(1, len(net.layers)):  # skip the Input layer (i=0)
         layer_type = net.layers[i].type
@@ -84,10 +79,10 @@ if __name__ == '__main__':
             layer_config = parser.get_config(layer_name)
 
         # printing
-        print('layer', i, ':', layer_type)
+        print('... layer', i, ':', layer_type)
 
         # logging
         info = [i, layer_type, layer_name]
-        logging(logfile, info + layer_config)
+        logging(cfg_file, info + layer_config)
 
-    logfile.close()
+    cfg_file.close()

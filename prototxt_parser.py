@@ -33,7 +33,7 @@ class PrototxtParser:
             layer_name = layer.name
             layer_type = layer.type
             assert type(layer_type==str), 'Only string layer type supported!'
-            print('find layer '+layer_name)
+            print('... find layer '+layer_name)
 
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param
