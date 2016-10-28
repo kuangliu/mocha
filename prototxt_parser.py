@@ -1,39 +1,42 @@
-# -----------------------------------------------------------------------------
-# PrototxtParser is for parsing layer configs from .prototxt file using
-# Google Protobuf API.
-#
-# The .prototxt layer must start with 'layer {...}'.
-# The layer type must be string, as described in:
-#   http://caffe.berkeleyvision.org/tutorial/layers.html
-#
-# ref: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
-# -----------------------------------------------------------------------------
+'''Prototxt parser.
+
+PrototxtParser is for parsing layer configurations from .prototxt file using
+Google Protobuf API.
+
+Note:
+  The .prototxt layer must start with 'layer {...}'.
+  The layer type must be string, as described in:
+    http://caffe.berkeleyvision.org/tutorial/layers.html
+
+Reference: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
+'''
 
 from caffe.proto import caffe_pb2
 from google.protobuf import text_format
 
 
 class PrototxtParser:
-    '''Load a prototxt file and parse CONV/POOL/DROPOUT configs out.
+    '''Parse layer configurations from a prototxt file.
 
-    Returns:
-     - CONV: [num_output, kW,kH,dW,dH,pW,pH]
-     - POOLING: [pool_type, kW,kH,dW,dH,pW,pH]
-        - pool_type = (0=MAX, 1=AVE, 2=STOCHASTIC)
-     - DROPOUT: [drop_ratio]
-     - InnerProduct: [num_output]
+    The layer and its parsed configurations:
+      (1) Convolution: [num_output, kW,kH,dW,dH,pW,pH]
+      (2) Pooling: [pool_type, kW,kH,dW,dH,pW,pH],
+            pool_type = (0=MAX, 1=AVE, 2=STOCHASTIC)
+      (3) Dropout: [drop_ratio]
+      (4) InnerProduct: [num_output]
     '''
+
     def __init__(self, prototxt):
-        print('==> parse prototxt..')
+        print('==> Parsing prototxt..')
         net = caffe_pb2.NetParameter()
-        text_format.Merge(open(prototxt,'r').read(), net)
+        text_format.Merge(open(prototxt, 'r').read(), net)
 
         self.config = {}
         for layer in net.layer:
             layer_name = layer.name
             layer_type = layer.type
-            assert type(layer_type==str), 'Only string layer type supported!'
-            print('... find layer '+layer_name)
+            assert type(layer_type==str), 'ERROR: only string layer type supported!'
+            print('... Find layer ' + layer_name)
 
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param
