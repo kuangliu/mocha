@@ -1,9 +1,10 @@
 '''Export caffe model layer params to disk.'''
+
 from __future__ import print_function
 
 import os
 import sys
-os.environ['GLOG_minloglevel'] = '2' # hide caffe debug info
+os.environ['GLOG_minloglevel'] = '2'  # hide caffe debug info
 
 import caffe
 
@@ -25,7 +26,6 @@ def save_param(net, layer_name):
     Save weight & running_mean as '*.w.npy'.
     Save bias & running_var as '*.b.npy'.
     '''
-
     num_layers = len(net.params[layer_name])
     assert num_layers > 0, 'ERROR: no param in layer ' + layer_name
 

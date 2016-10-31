@@ -1,4 +1,5 @@
 '''Import layer params from disk to rebuild the caffemodel.'''
+
 from __future__ import print_function
 
 import os
@@ -75,7 +76,6 @@ def build_prototxt(input_size):
 
     Save as 'cvt_net.prototxt'.
     '''
-
     print('==> Building prototxt..')
 
     # Map layer_type to its processing function.
@@ -127,7 +127,6 @@ def load_params(layer_name):
       (ndarray) weight or running_mean or None.
       (ndarray) bias or running_var or None.
     '''
-
     weight_path = PARAM_DIR + layer_name + '.w.npy'
     bias_path = PARAM_DIR + layer_name + '.b.npy'
     weight = np.load(weight_path) if os.path.isfile(weight_path) else None
@@ -140,7 +139,6 @@ def fill_params():
 
     Save as 'cvt_net.caffemodel'.
     '''
-
     print('==> Filling layer params..')
 
     net = caffe.Net('cvt_net.prototxt', caffe.TEST)

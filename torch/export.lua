@@ -5,16 +5,22 @@
 require 'nn';
 require 'xlua';
 require 'paths';
+
 npy4th = require 'npy4th';
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
+
+-- Directory for saving layer params.
+SAVE_DIR = './params/'
+
+
 ---------------------------------------------------------------
--- Save weight & bias to disk as *.w/b.npy
+-- Save layer params to disk.
 --
 function save_param(save_name, weight, bias)
-    npy4th.savenpy(save_dir..save_name..'.w.npy', weight)
-    if bias then npy4th.savenpy(save_dir..save_name..'.b.npy', bias) end
+    npy4th.savenpy(SAVE_DIR..save_name..'.w.npy', weight)
+    if bias then npy4th.savenpy(SAVE_DIR..save_name..'.b.npy', bias) end
 end
 
 ---------------------------------------------------------------
@@ -51,12 +57,12 @@ end
 -- the full torch BN functionality.
 --
 function bn_layer(layer, idx)
-    -- save running_mean & running_var as bn.w/b.npy
+    -- Save running_mean & running_var.
     local layer_name = 'bn'..idx
     save_param(layer_name, layer.running_mean, layer.running_var)
     logging(idx, 'BatchNorm', layer_name)
 
-    -- save weight & bias as scale.w/b.npy
+    -- Save weight & bias.
     layer_name = 'scale'..idx
     save_param(layer_name, layer.weight, layer.bias)
     logging(idx, 'Scale', layer_name)
@@ -104,16 +110,16 @@ function noparam_layer(layer, idx)
     end
 end
 
-save_dir = './params/'
-paths.mkdir(save_dir)
 
--- load torch model
+paths.mkdir(SAVE_DIR)
+
+-- Load torch model.
 net = torch.load('./net.t7')
 
-cfgfile = io.open(save_dir..'net.config', 'w')
+cfgfile = io.open(SAVE_DIR..'net.config', 'w')
 
--- map layer type to it's saving function
-layerfunc = {
+-- Map layer type to it's saving function.
+layerfn = {
     ['nn.SpatialConvolution'] = conv_layer,
     ['nn.SpatialBatchNormalization'] = bn_layer,
     ['nn.SpatialMaxPooling'] = pooling_layer,
@@ -124,16 +130,14 @@ layerfunc = {
     ['nn.SoftMax'] = noparam_layer,
 }
 
-print('==> exporting..')
+print('==> Exporting..')
 for i = 1,#net do
-    layer = net:get(i)
-    layer_type = torch.type(layer)
-    print('... '..'layer '..i..' : '..layer_type)
+    local layer = net:get(i)
+    local layer_type = torch.type(layer)
+    print('... '..'Layer '..i..' : '..layer_type)
 
-    save_layer = layerfunc[layer_type]
-    if not save_layer then
-        error('[ERROR] Save '..layer_type..' not supported yet!')
-    end
+    local save_layer = layerfn[layer_type]
+    assert(save_layer, 'ERROR save '..layer_type..' not supported yet!')
     save_layer(layer, i)
 end
 
