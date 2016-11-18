@@ -49,7 +49,13 @@ class PrototxtParser:
                 pH = cfg.pad[0] if len(cfg.pad) else cfg.pad_h
                 dW = dW if dW else 1    # set default stride=1
                 dH = dH if dH else 1
-                self.config[layer_name] = [num_output,kW,kH,dW,dH,pW,pH]
+                self.config[layer_name] = {'num_output': num_output,
+                                           'kW': kW,
+                                           'kH': kH,
+                                           'dW': dW,
+                                           'dH': dH,
+                                           'pW': pW,
+                                           'pH': pH}
             elif layer_type == 'Pooling':
                 cfg = layer.pooling_param
                 pool_type = cfg.pool  # MAX=0, AVE=1, STOCHASTIC=2
@@ -61,14 +67,21 @@ class PrototxtParser:
                 pH = cfg.pad_h if cfg.pad_h else cfg.pad
                 dW = dW if dW else 1    # set default stride=1
                 dH = dH if dH else 1
-                self.config[layer_name] = [pool_type,kW,kH,dW,dH,pW,pH]
+                self.config[layer_name] = {'pool_type': pool_type,
+                                           'kW': kW,
+                                           'kH': kH,
+                                           'dW': dW,
+                                           'dH': dH,
+                                           'pW': pW,
+                                           'pH': pH}
             elif layer_type == 'Dropout':
                 p = layer.dropout_param.dropout_ratio
-                self.config[layer_name] = [p]
+                self.config[layer_name] = {'dropout_ratio': p}
             elif layer_type == 'InnerProduct':
                 num_output = layer.inner_product_param.num_output
-                self.config[layer_name] = [num_output]
+                self.config[layer_name] = {'num_output': num_output}
 
     def get_config(self, layer_name):
         '''Return layer config.'''
-        return self.config[layer_name]
+        c = self.config.get(layer_name)
+        return c if c else {}

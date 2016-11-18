@@ -3,8 +3,9 @@
 from __future__ import print_function
 
 import os
+os.environ['GLOG_minloglevel'] = '2'  # Hide caffe debug info.
 import sys
-os.environ['GLOG_minloglevel'] = '2'  # hide caffe debug info
+import json
 
 import caffe
 
@@ -13,11 +14,11 @@ import numpy as np
 from prototxt_parser import PrototxtParser
 
 
-# Directory for saving layer params & configs.
-SAVE_DIR = './params/'
+PARAM_DIR = './param/'   # Directory for saving layer params.
+CONFIG_DIR = './config/'  # Directory for saving network configs.
 
 
-def save_param(net, layer_name):
+def dump_param(net, layer_name):
     '''Save layer params to disk.
 
     For CONV, LINEAR, SCALE, save weight & bias.
@@ -26,28 +27,26 @@ def save_param(net, layer_name):
     Save weight & running_mean as '*.w.npy'.
     Save bias & running_var as '*.b.npy'.
     '''
-    num_layers = len(net.params[layer_name])
-    assert num_layers > 0, 'ERROR: no param in layer ' + layer_name
+    layer = net.params.get(layer_name)
+    if not layer:   # For layer has no params, return.
+        return
 
     # Save weight.
     weight = net.params[layer_name][0].data
-    np.save(SAVE_DIR + layer_name + '.w', weight)
+    np.save(PARAM_DIR + layer_name + '.w', weight)
 
     # Save bias, if exists.
-    if num_layers > 1:
+    if len(layer) > 1:
         bias = net.params[layer_name][1].data
-        np.save(SAVE_DIR + layer_name + '.b', bias)
-
-def logging(file, L):
-    '''Logging list content to file.'''
-    L = [str(x) for x in L]
-    file.write('\t'.join(L)+'\n')
-
+        np.save(PARAM_DIR + layer_name + '.b', bias)
 
 if __name__ == '__main__':
-    # mkdir for saving layer params and config file.
-    if not os.path.isdir(SAVE_DIR):
-        os.mkdir(SAVE_DIR)
+    # mkdir for saving layer params and configs.
+    if not os.path.isdir(PARAM_DIR):
+        os.mkdir(PARAM_DIR)
+
+    if not os.path.isdir(CONFIG_DIR):
+        os.mkdir(CONFIG_DIR)
 
     prototxt = './model/net.prototxt'
     binary = './model/net.caffemodel'
@@ -58,15 +57,17 @@ if __name__ == '__main__':
     # Load caffe model.
     net = caffe.Net(prototxt, binary, caffe.TEST)
 
-    # Logging layer configs to config file.
-    config_file = open(SAVE_DIR + 'net.config', 'w')
+    # Model config file.
+    net_config = []
 
     # Parse model params layer by layer.
     print('\n==> Exporting layers..')
-    for i in range(1, len(net.layers)):  # Skip the `Input` layer (i=0).
+    for i in range(len(net.layers)):
         layer_type = net.layers[i].type
         layer_name = net._layer_names[i]
-        layer_config = []                # Layer configs for logging.
+        layer_config = {'type': layer_type,
+                        'id': i,
+                        'name': layer_name}
 
         print('... Layer %d : %s' % (i, layer_type))
 
@@ -75,16 +76,15 @@ if __name__ == '__main__':
                               'InnerProduct', 'Dropout', 'Softmax']:
             raise TypeError(layer_type + ' layer not supported yet!')
 
-        # Save layers params.
-        if layer_type in ['Convolution', 'BatchNorm', 'Scale', 'InnerProduct']:
-            save_param(net, layer_name)
+        # Dump layer params to disk (if it has).
+        dump_param(net, layer_name)
 
-        # Get layer config from prototxt.
-        if layer_type in ['Convolution', 'Pooling', 'Dropout', 'InnerProduct']:
-            layer_config = parser.get_config(layer_name)
+        # Merge prototxt configs into layer_config.
+        layer_config.update(parser.get_config(layer_name))
 
-        # Logging.
-        info = [i, layer_type, layer_name]
-        logging(config_file, info + layer_config)
+        # Add layer_config to net_config.
+        net_config.append(layer_config)
 
-    config_file.close()
+    # Dump config to file.
+    with open(CONFIG_DIR + 'net.json', 'w') as f:
+        json.dump(net_config, f, indent=2)
