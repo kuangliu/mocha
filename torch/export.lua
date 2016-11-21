@@ -2,25 +2,26 @@
 -- Export torch model layer params to disk.
 ------------------------------------------------------------------
 
-require 'nn';
-require 'xlua';
-require 'paths';
+require 'nn'
+require 'xlua'
+require 'json'
+require 'paths'
 
 npy4th = require 'npy4th';
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
 
--- Directory for saving layer params.
-SAVE_DIR = './params/'
+PARAM_DIR = './param/'    -- Directory for saving layer params.
+CONFIG_DIR = './config/'  -- Directory for saving net configs.
 
 
 ---------------------------------------------------------------
 -- Save layer params to disk.
 --
 function save_param(save_name, weight, bias)
-    npy4th.savenpy(SAVE_DIR..save_name..'.w.npy', weight)
-    if bias then npy4th.savenpy(SAVE_DIR..save_name..'.b.npy', bias) end
+    npy4th.savenpy(PARAM_DIR..save_name..'.w.npy', weight)
+    if bias then npy4th.savenpy(PARAM_DIR..save_name..'.b.npy', bias) end
 end
 
 ---------------------------------------------------------------
@@ -47,8 +48,19 @@ function conv_layer(layer, idx)
     local kW,kH = layer.kW,layer.kH
     local dW,dH = layer.dW,layer.dH
     local pW,pH = layer.padW,layer.padH
-    local cfg = {nOutput, kW,kH,dW,dH,pW,pH}
-    logging(idx, 'Convolution', layer_name, cfg)
+
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'Convolution',
+        ['name'] = layer_name,
+        ['num_output'] = nOutput,
+        ['kW'] = kW,
+        ['kH'] = kH,
+        ['dW'] = dW,
+        ['dH'] = dH,
+        ['pW'] = pW,
+        ['pH'] = pH,
+    }
 end
 
 ---------------------------------------------------------------
@@ -60,12 +72,22 @@ function bn_layer(layer, idx)
     -- Save running_mean & running_var.
     local layer_name = 'bn'..idx
     save_param(layer_name, layer.running_mean, layer.running_var)
-    logging(idx, 'BatchNorm', layer_name)
+
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'BatchNorm',
+        ['name'] = layer_name,
+    }
 
     -- Save weight & bias.
     layer_name = 'scale'..idx
     save_param(layer_name, layer.weight, layer.bias)
-    logging(idx, 'Scale', layer_name)
+
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'Scale',
+        ['name'] = layer_name,
+    }
 end
 
 ---------------------------------------------------------------
@@ -78,8 +100,19 @@ function pooling_layer(layer, idx)
     local kW,kH = layer.kW,layer.kH
     local dW,dH = layer.dW,layer.dH
     local pW,pH = layer.padW,layer.padH
-    local cfg = {pool_type, kW,kH,dW,dH,pW,pH}
-    logging(idx, 'Pooling', layer_name, cfg)
+
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'Pooling',
+        ['name'] = layer_name,
+        ['pool_type'] = pool_type,
+        ['kW'] = kW,
+        ['kH'] = kH,
+        ['dW'] = dW,
+        ['dH'] = dH,
+        ['pW'] = pW,
+        ['pH'] = pH,
+    }
 end
 
 ---------------------------------------------------------------
@@ -90,33 +123,59 @@ function linear_layer(layer, idx)
     save_param(layer_name, layer.weight, layer.bias)
 
     local nOutput = layer.weight:size(1)
-    logging(idx, 'InnerProduct', layer_name, {nOutput})
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'InnerProduct',
+        ['name'] = layer_name,
+        ['num_output'] = nOutput,
+    }
 end
 
 ---------------------------------------------------------------
 -- For layer has no param or config, just logging.
 --
 function noparam_layer(layer, idx)
-    local layer_name
-    if torch.type(layer) == 'nn.ReLU' then
-        layer_name = 'relu'..idx
-        logging(idx, 'ReLU', layer_name)
-    elseif torch.type(layer) == 'nn.View' then
-        layer_name = 'flatten'..idx
-        logging(idx, 'Flatten', layer_name)
-    elseif torch.type(layer) == 'nn.SoftMax' then
-        layer_name = 'softmax'..idx
-        logging(idx, 'Softmax', layer_name)
-    end
+    -- Map torch layer type to caffe layer type and layer name.
+    local layer_type_name = {
+        ['nn.ReLU'] = {'ReLU', 'relu'..idx},
+        ['nn.View'] = {'Flatten', 'flatten'..idx},
+        ['nn.SoftMax'] = {'Softmax', 'softmax'..idx},
+    }
+
+    local type_name = layer_type_name[torch.type(layer)]
+
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = type_name[1],
+        ['name'] = type_name[2],
+    }
 end
 
 
-paths.mkdir(SAVE_DIR)
+if #arg ~= 4 then
+    print('Usage: th torch/export.lua [input_shape]')
+    print('e.g. th torch/export.lua {1,1,28,28}')
+    return
+else
+    input_shape = { tonumber(arg[1]), tonumber(arg[2]),
+                    tonumber(arg[3]), tonumber(arg[4]) }
+end
+
+paths.mkdir(PARAM_DIR)
+paths.mkdir(CONFIG_DIR)
 
 -- Load torch model.
 net = torch.load('./net.t7')
 
-cfgfile = io.open(SAVE_DIR..'net.config', 'w')
+net_config = {}
+
+-- Add input layer config.
+net_config[#net_config+1] = {
+    ['id'] = #net_config,
+    ['type'] = 'DummyData',
+    ['name'] = 'data',
+    ['input_shape'] = input_shape
+}
 
 -- Map layer type to it's saving function.
 layerfn = {
@@ -137,8 +196,22 @@ for i = 1,#net do
     print('... '..'Layer '..i..' : '..layer_type)
 
     local save_layer = layerfn[layer_type]
-    assert(save_layer, 'ERROR save '..layer_type..' not supported yet!')
+    assert(save_layer, 'ERROR: save '..layer_type..' not supported yet!')
     save_layer(layer, i)
 end
 
-cfgfile:close()
+-- Save config file.
+json.save(CONFIG_DIR..'net.json', net_config)
+
+-- Graph.
+graph = torch.zeros(#net+1, #net+1)  -- Including input layer.
+
+-- TODO: build graph from net structure.
+-- For now just sequential.
+for i = 1, graph:size(1) do
+    graph[i][i] = 1
+    if i < graph:size(1) then
+        graph[i][i+1] = 1
+    end
+end
+npy4th.savenpy(CONFIG_DIR..'graph.npy', graph)

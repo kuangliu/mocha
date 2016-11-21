@@ -1,6 +1,6 @@
 '''Prototxt parser.
 
-PrototxtParser is for parsing layer layer_configurations from .prototxt file using
+PrototxtParser is for parsing layer configurations from .prototxt file using
 Google Protobuf API.
 
 Note:
@@ -18,14 +18,15 @@ from google.protobuf.descriptor import FieldDescriptor as FD
 
 
 class PrototxtParser:
-    '''Parse layer layer_configurations from a prototxt file.
+    '''Parse layer configurations from a prototxt file.
 
-    The layer and its parsed layer_configurations:
-    (1) Convolution: [num_output, kW,kH,dW,dH,pW,pH]
-    (2) Pooling: [pool_type, kW,kH,dW,dH,pW,pH],
+    The layer and its parsed configurations:
+    (1) Data/DummyData: [input_shape]
+    (2) Convolution: [num_output, kW,kH,dW,dH,pW,pH]
+    (3) Pooling: [pool_type, kW,kH,dW,dH,pW,pH],
           pool_type = (0=MAX, 1=AVE, 2=STOCHASTIC)
-    (3) Dropout: [drop_ratio]
-    (4) InnerProduct: [num_output]
+    (4) Dropout: [drop_ratio]
+    (5) InnerProduct: [num_output]
     '''
     def __init__(self, prototxt):
         print('==> Parsing prototxt..')
@@ -70,7 +71,7 @@ class PrototxtParser:
             layer_type = layer.type
 
             assert type(layer_type==str), 'ERROR: only string layer type supported!'
-            print('... Find layer ' + layer_name)
+            print('... Find layer ', layer_name)
 
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param

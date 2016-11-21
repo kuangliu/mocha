@@ -2,23 +2,25 @@
 -- Rebuild torch model from saved layer params and config file.
 ------------------------------------------------------------------
 
-require 'nn';
-require 'xlua';
-require 'paths';
-npy4th = require 'npy4th';
+require 'nn'
+require 'xlua'
+require 'json'
+require 'paths'
+
+npy4th = require 'npy4th'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
 
--- Directory containing saved layer params.
-PARAM_DIR = './params/'
+PARAM_DIR = './param/'    -- Directory for saving layer params.
+CONFIG_DIR = './config/'  -- Directory for saving net configs.
 
 
 --------------------------------------------------------
 -- Load saved params from .npy file.
 --
 function load_params(layer_name)
-    assert(paths.dirp(PARAM_DIR), 'ERROR '..PARAM_DIR..' not exist!')
+    assert(paths.dirp(PARAM_DIR), 'ERROR: '..PARAM_DIR..' not exist!')
     -- Weight is compulsive.
     local weight = npy4th.loadnpy(PARAM_DIR..layer_name..'.w.npy')
     -- Bias is optional.
@@ -30,9 +32,9 @@ end
 --------------------------------------------------------
 -- New linear layer.
 --
-function linear_layer(layer_name)
+function linear_layer(layer_config)
     -- Load params.
-    local weight, bias = load_params(layer_name)
+    local weight, bias = load_params(layer_config.name)
     -- Define linear layer.
     local inputSize = weight:size(2)
     local outputSize = weight:size(1)
@@ -46,15 +48,18 @@ end
 --------------------------------------------------------
 -- New conv layer.
 --
-function conv_layer(layer_name)
+function conv_layer(layer_config)
     -- Load params.
-    local weight, bias = load_params(layer_name)
+    local weight, bias = load_params(layer_config.name)
     -- Define conv layer.
     local nInputPlane = weight:size(2)
     local nOutputPlane = weight:size(1)
-    local kW,kH = tonumber(splited[5]),tonumber(splited[6])
-    local dW,dH = tonumber(splited[7]),tonumber(splited[8])
-    local pW,pH = tonumber(splited[9]),tonumber(splited[10])
+    local kW = layer_config.kW
+    local kH = layer_config.kH
+    local dW = layer_config.dW
+    local dH = layer_config.dH
+    local pW = layer_config.pW
+    local pH = layer_config.pH
     local layer = nn.SpatialConvolution(nInputPlane, nOutputPlane, kW,kH,dW,dH,pW,pH)
     -- Copy params.
     layer.weight:copy(weight)
@@ -71,9 +76,9 @@ end
 -- If BatchNorm followed by Scale in caffemodel, affine=true.
 -- If BatchNorm with no Scale, affine=false.
 --
-function bn_layer(layer_name)
+function bn_layer(layer_config)
     -- Load params.
-    local running_mean, running_var = load_params(layer_name)
+    local running_mean, running_var = load_params(layer_config.name)
     -- Define BN layer.
     local nOutput = running_mean:size(1)
     -- Default assume [BN-Scale] in caffemodel, which affine=true.
@@ -89,11 +94,11 @@ end
 -- 1. If the previous layer is BN, merge the weight/bias.
 -- 2. If not... TODO
 --
-function scale_layer(layer_name)
-    local weight, bias = load_params(layer_name)
+function scale_layer(layer_config)
+    local weight, bias = load_params(layer_config.name)
     local lastbn = net:get(#net)
     assert(torch.type(lastbn) == 'nn.SpatialBatchNormalization',
-                'Scale must follow BatchNorm.')
+                'ERROR: Scale must follow BatchNorm.')
     lastbn.weight:copy(weight)
     lastbn.bias:copy(bias)
 end
@@ -101,19 +106,22 @@ end
 --------------------------------------------------------
 -- New pooling layer.
 --
-function pooling_layer(layer_name)
-    local pooling_type = splited[4] -- Max or average.
-    local kW,kH = tonumber(splited[5]),tonumber(splited[6])
-    local dW,dH = tonumber(splited[7]),tonumber(splited[8])
-    local pW,pH = tonumber(splited[9]),tonumber(splited[10])
+function pooling_layer(layer_config)
+    local pooling_type = layer_config.pool_type -- Max or average.
+    local kW = layer_config.kW
+    local kH = layer_config.kH
+    local dW = layer_config.dW
+    local dH = layer_config.dH
+    local pW = layer_config.pW
+    local pH = layer_config.pH
 
     local layer
-    if pooling_type == '0' then
+    if pooling_type == 0 then
         layer = nn.SpatialMaxPooling(kW,kH,dW,dH,pW,pH):ceil()
-    elseif pooling_type == '1' then
+    elseif pooling_type == 1 then
         layer = nn.SpatialAveragePooling(kW,kH,dW,dH,pW,pH):ceil()
     else
-        error('ERROR pooling type not supported!')
+        error('ERROR: pooling type not supported!')
     end
     return layer
 end
@@ -162,8 +170,9 @@ layerfn = {
 }
 
 -- Config file path.
-cfgpath = PARAM_DIR..'net.config'
-assert(paths.filep(cfgpath), 'ERROR '..cfgpath..' not exist!')
+config_path = CONFIG_DIR..'net.json'
+assert(paths.filep(config_path), 'ERROR: '..config_path..' not exist!')
+net_config = json.load(config_path)
 
 -- Transfer saved params to net.
 net = nn.Sequential()
@@ -171,14 +180,13 @@ net = nn.Sequential()
 -- Need flatten before adding any linear layers.
 flattened = false
 
-print('==> importing..')
-for line in io.lines(cfgpath) do
-    splited = string.split(line, '\t')
-    local layer_type = splited[2]
-    local layer_name = splited[3]
+print('==> Importing..')
+for i = 2,#net_config do  -- Skip input layer.
+    layer_config = net_config[i]
 
-    i = (i or 0) + 1
-    print('... layer '..i..': '..layer_type)
+    local layer_type = layer_config.type
+    print(layer_type)
+    print('... Layer '..(i-1)..': '..layer_type)
 
     -- If not flattened, add a flatten layer before any linear layers.
     if not flattened and layer_type == 'InnerProduct' then
@@ -192,10 +200,10 @@ for line in io.lines(cfgpath) do
     -- Add a new layer.
     local getlayer = layerfn[layer_type]
     if not getlayer then
-        error('[ERROR]'..layer_type..' not supported yet!')
+        error('ERROR: '..layer_type..' not supported yet!')
     end
 
-    local layer = getlayer(layer_name)
+    local layer = getlayer(layer_config)
     if layer then net:add(layer) end    -- Scale layer returns nil.
 end
 
@@ -203,7 +211,7 @@ print(net)
 torch.save('net.t7', net)
 
 -- test
-print('testing..')
+print('Testing..')
 net:evaluate()
 x = torch.randn(1,1,28,28)
 npy4th.savenpy('x.npy',x)
