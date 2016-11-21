@@ -48,43 +48,60 @@ if __name__ == '__main__':
     if not os.path.isdir(CONFIG_DIR):
         os.mkdir(CONFIG_DIR)
 
-    prototxt = './model/net.prototxt'
-    binary = './model/net.caffemodel'
+    # prototxt = './model/net.prototxt'
+    # binary = './model/net.caffemodel'
+    prototxt = './cvt_net.prototxt'
+    binary = './cvt_net.caffemodel'
 
-    # Define prototxt parser.
+    net = caffe.Net(prototxt, binary, caffe.TEST)
     parser = PrototxtParser(prototxt)
 
-    # Load caffe model.
-    net = caffe.Net(prototxt, binary, caffe.TEST)
-
-    # Model config file.
-    net_config = []
+    # Graph representing net structure using adjacent matrix.
+    num_layers = len(net.layers)
+    graph = np.zeros((num_layers,num_layers))
 
     # Parse model params layer by layer.
     print('\n==> Exporting layers..')
-    for i in range(len(net.layers)):
+    SUPPORTED_LAYERS = ['Input', 'Data', 'DummyData', 'Convolution',  \
+                        'BatchNorm', 'Scale', 'ReLU', 'Pooling',      \
+                        'Flatten', 'InnerProduct', 'Dropout', 'Softmax']
+
+    net_config = []
+    for i in range(num_layers):
         layer_type = net.layers[i].type
         layer_name = net._layer_names[i]
-        layer_config = {'type': layer_type,
-                        'id': i,
-                        'name': layer_name}
+
+        # Use 'DummyData' layer instead of 'Input' layer.
+        if layer_type == 'Input':
+            layer_type = 'DummyData'
+            layer_name = parser.input_layer_name
 
         print('... Layer %d : %s' % (i, layer_type))
 
-        if layer_type not in ['Input', 'Convolution', 'BatchNorm',      \
-                              'Scale', 'ReLU', 'Pooling', 'Flatten',    \
-                              'InnerProduct', 'Dropout', 'Softmax']:
+        if layer_type not in SUPPORTED_LAYERS:
             raise TypeError(layer_type + ' layer not supported yet!')
 
         # Dump layer params to disk (if it has).
         dump_param(net, layer_name)
 
-        # Merge prototxt configs into layer_config.
-        layer_config.update(parser.get_config(layer_name))
+        # Get layer_config.
+        layer_config = {'id'  : i,
+                        'type': layer_type,
+                        'name': layer_name}
+        layer_config.update(parser.get_layer_config(layer_name))
 
         # Add layer_config to net_config.
         net_config.append(layer_config)
 
-    # Dump config to file.
+        # Add node to graph.
+        # TODO: build graph based on prototxt.
+        graph[i][i] = 1
+        if i < num_layers - 1:
+            graph[i][i+1] = 1
+
+    # Dump layer config to file.
     with open(CONFIG_DIR + 'net.json', 'w') as f:
         json.dump(net_config, f, indent=2)
+
+    # Saving graph adj matrix to file.
+    np.save(CONFIG_DIR + 'graph.npy', graph)
