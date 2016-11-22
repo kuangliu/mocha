@@ -16,6 +16,7 @@ from caffe import layers as L
 PARAM_DIR = './param/'
 CONFIG_DIR = './config/'
 
+
 def input_layer(layer_config):
     input_shape = layer_config['input_shape']
     return L.DummyData(shape=[dict(dim=input_shape)], ntop=1)
@@ -127,7 +128,7 @@ def build_prototxt():
                 net[layer_name] = layer
                 dfs(G, w)
 
-    # DFS
+    # DFS.
     dfs(graph, 0)
 
     # Save prototxt.
@@ -144,6 +145,7 @@ def load_params(layer_name):
     '''
     weight_path = PARAM_DIR + layer_name + '.w.npy'
     bias_path = PARAM_DIR + layer_name + '.b.npy'
+
     weight = np.load(weight_path) if os.path.isfile(weight_path) else None
     bias = np.load(bias_path) if os.path.isfile(bias_path) else None
 
@@ -164,10 +166,14 @@ def fill_params():
         print('... Layer %d : %s' % (i, layer_type))
 
         weight, bias = load_params(layer_name)
+
         if weight is not None:
             net.params[layer_name][0].data[...] = weight
         if bias is not None:
             net.params[layer_name][1].data[...] = bias
+
+        if layer_type == 'BatchNorm':
+            net.params[layer_name][2].data[...] = 1.  # use_global_stats=true
 
     net.save('cvt_net.caffemodel')
     print('Saved!')

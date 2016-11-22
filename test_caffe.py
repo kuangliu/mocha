@@ -22,6 +22,3 @@ x = np.load('x.npy')
 net.blobs['data'].data[...] = x
 out = net.forward()
 print(out)
-# np.save('y_caffe.npy', out['linear55'])
-# f = net.blobs['conv1'].data
-# print(f)
