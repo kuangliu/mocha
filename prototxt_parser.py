@@ -42,11 +42,10 @@ class PrototxtParser:
 
         # Data layer.
         data_layers = [l for l in layers if l.type.lower() in ['data', 'dummydata']]
-
         num_data_layers = len(data_layers)
+
         if num_data_layers == 0:
             print('No data layer in prototxt, checking for input params..')
-
             assert len(net.input) > 0
             assert len(net.input_shape) > 0
 

@@ -18,23 +18,12 @@ CONFIG_DIR = './config/'  -- Directory for saving net configs.
 
 ---------------------------------------------------------------
 -- Save layer params to disk.
+-- Note we convert to DoubleTensor instead of using default
+-- FloatTensor because of a weird bug in npy4th...
 --
 function save_param(save_name, weight, bias)
-    npy4th.savenpy(PARAM_DIR..save_name..'.w.npy', weight)
-    if bias then npy4th.savenpy(PARAM_DIR..save_name..'.b.npy', bias) end
-end
-
----------------------------------------------------------------
--- Write layer config to config file.
---
-function logging(idx, layer_type, layer_name, cfg)
-    local s = idx..'\t'..layer_type..'\t'..layer_name
-
-    cfg = cfg or {}
-    for _,v in pairs(cfg) do
-        s = s .. '\t' .. v
-    end
-    cfgfile:write(s..'\n')
+    npy4th.savenpy(PARAM_DIR..save_name..'.w.npy', weight:double())
+    if bias then npy4th.savenpy(PARAM_DIR..save_name..'.b.npy', bias:double()) end
 end
 
 ---------------------------------------------------------------
@@ -68,26 +57,31 @@ end
 -- The reason for doing this is caffe uses BN+Scale to achieve
 -- the full torch BN functionality.
 --
+
 function bn_layer(layer, idx)
     -- Save running_mean & running_var.
     local layer_name = 'bn'..idx
     save_param(layer_name, layer.running_mean, layer.running_var)
 
+    local affine = layer.weight and true or false
     net_config[#net_config+1] = {
         ['id'] = #net_config,
         ['type'] = 'BatchNorm',
         ['name'] = layer_name,
+        ['affine'] = affine,
     }
 
-    -- Save weight & bias.
-    layer_name = 'scale'..idx
-    save_param(layer_name, layer.weight, layer.bias)
+    -- if affine=true, save BN weight & bias as Scale layer params.
+    if affine then
+        layer_name = 'scale'..idx
+        save_param(layer_name, layer.weight, layer.bias)
 
-    net_config[#net_config+1] = {
-        ['id'] = #net_config,
-        ['type'] = 'Scale',
-        ['name'] = layer_name,
-    }
+        net_config[#net_config+1] = {
+            ['id'] = #net_config,
+            ['type'] = 'Scale',
+            ['name'] = layer_name,
+        }
+    end
 end
 
 ---------------------------------------------------------------
@@ -164,9 +158,7 @@ end
 paths.mkdir(PARAM_DIR)
 paths.mkdir(CONFIG_DIR)
 
--- Load torch model.
-net = torch.load('./net.t7')
-
+net = torch.load('./model/nn.t7')
 net_config = {}
 
 -- Add input layer config.
@@ -174,7 +166,7 @@ net_config[#net_config+1] = {
     ['id'] = #net_config,
     ['type'] = 'DummyData',
     ['name'] = 'data',
-    ['input_shape'] = input_shape
+    ['input_shape'] = input_shape,
 }
 
 -- Map layer type to it's saving function.
@@ -204,7 +196,7 @@ end
 json.save(CONFIG_DIR..'net.json', net_config)
 
 -- Graph.
-graph = torch.zeros(#net+1, #net+1)  -- Including input layer.
+graph = torch.zeros(#net_config, #net_config)
 
 -- TODO: build graph from net structure.
 -- For now just sequential.

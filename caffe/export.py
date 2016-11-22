@@ -48,10 +48,10 @@ if __name__ == '__main__':
     if not os.path.isdir(CONFIG_DIR):
         os.mkdir(CONFIG_DIR)
 
-    # prototxt = './model/net.prototxt'
-    # binary = './model/net.caffemodel'
-    prototxt = './cvt_net.prototxt'
-    binary = './cvt_net.caffemodel'
+    prototxt = './model/t.prototxt'
+    binary = './model/t.caffemodel'
+    # prototxt = './cvt_net.prototxt'
+    # binary = './cvt_net.caffemodel'
 
     net = caffe.Net(prototxt, binary, caffe.TEST)
     parser = PrototxtParser(prototxt)

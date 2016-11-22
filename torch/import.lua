@@ -28,7 +28,6 @@ function load_params(layer_name)
     local bias = paths.filep(bias_path) and npy4th.loadnpy(bias_path) or nil
     return weight, bias
 end
-
 --------------------------------------------------------
 -- New linear layer.
 --
@@ -77,12 +76,11 @@ end
 -- If BatchNorm with no Scale, affine=false.
 --
 function bn_layer(layer_config)
-    -- Load params.
     local running_mean, running_var = load_params(layer_config.name)
-    -- Define BN layer.
     local nOutput = running_mean:size(1)
-    -- Default assume [BN-Scale] in caffemodel, which affine=true.
-    local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, true)
+
+    local affine = layer_config.affine
+    local layer = nn.SpatialBatchNormalization(nOutput, nil, nil, affine)
     -- Copy params.
     layer.running_mean:copy(running_mean)
     layer.running_var:copy(running_var)
@@ -99,6 +97,7 @@ function scale_layer(layer_config)
     local lastbn = net:get(#net)
     assert(torch.type(lastbn) == 'nn.SpatialBatchNormalization',
                 'ERROR: Scale must follow BatchNorm.')
+    assert(lastbn.affine, 'ERROR: Scale layer must follow BatchNorm.')
     lastbn.weight:copy(weight)
     lastbn.bias:copy(bias)
 end
@@ -185,7 +184,6 @@ for i = 2,#net_config do  -- Skip input layer.
     layer_config = net_config[i]
 
     local layer_type = layer_config.type
-    print(layer_type)
     print('... Layer '..(i-1)..': '..layer_type)
 
     -- If not flattened, add a flatten layer before any linear layers.
@@ -213,7 +211,7 @@ torch.save('net.t7', net)
 -- test
 print('Testing..')
 net:evaluate()
-x = torch.randn(1,1,28,28)
+x = torch.randn(1,3,96,96)
 npy4th.savenpy('x.npy',x)
 
 y = net:float():forward(x:float())

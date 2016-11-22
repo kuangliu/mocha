@@ -157,7 +157,7 @@ def fill_params():
     print('==> Filling layer params..')
 
     net = caffe.Net('cvt_net.prototxt', caffe.TEST)
-    for i in range(1, len(net.layers)):  # Skip the data layer
+    for i in range(len(net.layers)):
         layer_name = net._layer_names[i]
         layer_type = net.layers[i].type
 
