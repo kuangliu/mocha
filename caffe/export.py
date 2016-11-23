@@ -1,14 +1,12 @@
-'''Export caffe model layer params to disk.'''
+'''Export caffe model config and layer params to disk.'''
 
 from __future__ import print_function
 
 import os
 os.environ['GLOG_minloglevel'] = '2'  # Hide caffe debug info.
-import sys
+
 import json
-
 import caffe
-
 import numpy as np
 
 from prototxt_parser import PrototxtParser
@@ -28,7 +26,7 @@ def dump_param(net, layer_name):
     Save bias & running_var as '*.b.npy'.
     '''
     layer = net.params.get(layer_name)
-    if not layer:   # For layer has no params, return.
+    if not layer:  # For layer has no params, return.
         return
 
     # Save weight.
@@ -36,12 +34,14 @@ def dump_param(net, layer_name):
     np.save(PARAM_DIR + layer_name + '.w', weight)
 
     # Save bias, if exists.
+    # Note for BatchNorm layer, the attribute `use_global_stats`,
+    # which is stored in `net.params[layer_name][2]`, is ommited here.
     if len(layer) > 1:
         bias = net.params[layer_name][1].data
         np.save(PARAM_DIR + layer_name + '.b', bias)
 
+
 if __name__ == '__main__':
-    # mkdir for saving layer params and configs.
     if not os.path.isdir(PARAM_DIR):
         os.mkdir(PARAM_DIR)
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     num_layers = len(net.layers)
     graph = np.zeros((num_layers,num_layers))
 
-    # Parse model params layer by layer.
+    # Parse model layer by layer.
     print('\n==> Exporting layers..')
     SUPPORTED_LAYERS = ['Input', 'Data', 'DummyData', 'Convolution',  \
                         'BatchNorm', 'Scale', 'ReLU', 'Pooling',      \
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         print('... Layer %d : %s' % (i, layer_type))
 
         if layer_type not in SUPPORTED_LAYERS:
-            raise TypeError(layer_type + ' layer not supported yet!')
+            raise TypeError('%s layer not supported yet!' % layer_type)
 
         # Dump layer params to disk (if it has).
         dump_param(net, layer_name)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         net_config.append(layer_config)
 
         # Add node to graph.
-        # TODO: build graph based on prototxt.
+        # TODO: build graph based on prototxt, for now just sequential.
         graph[i][i] = 1
         if i < num_layers - 1:
             graph[i][i+1] = 1
@@ -103,5 +103,5 @@ if __name__ == '__main__':
     with open(CONFIG_DIR + 'net.json', 'w') as f:
         json.dump(net_config, f, indent=2)
 
-    # Saving graph adj matrix to file.
+    # Save graph adj matrix to file.
     np.save(CONFIG_DIR + 'graph.npy', graph)

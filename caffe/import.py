@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import os
-os.environ['GLOG_minloglevel'] = '2' # Hide caffe debug info.
+os.environ['GLOG_minloglevel'] = '2'  # Hide caffe debug info.
 
 import json
 import caffe
@@ -12,7 +12,7 @@ import numpy as np
 from caffe import layers as L
 
 
-# Directory containing layer params and config file.
+# Directory containing layer param and config file.
 PARAM_DIR = './param/'
 CONFIG_DIR = './config/'
 
@@ -76,11 +76,11 @@ def softmax_layer(layer_config, bottom_name):
 def build_prototxt():
     '''Build a new prototxt from config file.
 
-    Save as 'cvt_net.prototxt'.
+    Save as `cvt_net.prototxt`.
     '''
     print('==> Building prototxt..')
 
-    # Map layer_type to its processing function.
+    # Map layer_type to its building function.
     layer_fn = {
         'Data': input_layer,
         'DummyData': input_layer,
@@ -96,7 +96,6 @@ def build_prototxt():
 
     net = caffe.NetSpec()
 
-    # Build other layers based on config file.
     with open(CONFIG_DIR + 'net.json', 'r') as f:
         net_config = json.load(f)
 
@@ -122,7 +121,7 @@ def build_prototxt():
                 print('... Add layer: %s' % layer_type)
                 get_layer = layer_fn.get(layer_type)
                 if not get_layer:
-                    raise TypeError(layer_type + ' not supported yet!')
+                    raise TypeError('%s not supported yet!' % layer_type)
 
                 layer = get_layer(layer_config, bottom_layer_name)
                 net[layer_name] = layer
@@ -136,12 +135,12 @@ def build_prototxt():
         f.write(str(net.to_proto()))
         print('Saved!\n')
 
-def load_params(layer_name):
+def load_param(layer_name):
     '''Load saved layer params.
 
     Returns:
-      (ndarray) weight or running_mean or None.
-      (ndarray) bias or running_var or None.
+      (tensor) weight or running_mean or None.
+      (tensor) bias or running_var or None.
     '''
     weight_path = PARAM_DIR + layer_name + '.w.npy'
     bias_path = PARAM_DIR + layer_name + '.b.npy'
@@ -154,7 +153,7 @@ def load_params(layer_name):
 def fill_params():
     '''Fill network with saved params.
 
-    Save as 'cvt_net.caffemodel'.
+    Save as `cvt_net.caffemodel`.
     '''
     print('==> Filling layer params..')
 
@@ -165,7 +164,7 @@ def fill_params():
 
         print('... Layer %d : %s' % (i, layer_type))
 
-        weight, bias = load_params(layer_name)
+        weight, bias = load_param(layer_name)
 
         if weight is not None:
             net.params[layer_name][0].data[...] = weight

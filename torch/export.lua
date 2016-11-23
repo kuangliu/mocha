@@ -1,5 +1,5 @@
 ------------------------------------------------------------------
--- Export torch model layer params to disk.
+-- Export torch model config and layer param to disk.
 ------------------------------------------------------------------
 
 require 'nn'
@@ -12,14 +12,14 @@ npy4th = require 'npy4th';
 torch.setdefaulttensortype('torch.FloatTensor')
 
 
-PARAM_DIR = './param/'    -- Directory for saving layer params.
-CONFIG_DIR = './config/'  -- Directory for saving net configs.
+PARAM_DIR = './param/'    -- Directory for saving layer param.
+CONFIG_DIR = './config/'  -- Directory for saving net config.
 
 
 ---------------------------------------------------------------
--- Save layer params to disk.
--- Note we convert to DoubleTensor instead of using default
--- FloatTensor because of a weird bug in npy4th...
+-- Save layer param to disk.
+-- Note we convert default FloatTensor to DoubleTensor
+-- because of a weird bug in `npy4th`...
 --
 function save_param(save_name, weight, bias)
     npy4th.savenpy(PARAM_DIR..save_name..'.w.npy', weight:double())
@@ -27,7 +27,7 @@ function save_param(save_name, weight, bias)
 end
 
 ---------------------------------------------------------------
--- Save conv layer params.
+-- Save conv layer.
 --
 function conv_layer(layer, idx)
     local layer_name = 'conv'..idx
@@ -53,11 +53,10 @@ function conv_layer(layer, idx)
 end
 
 ---------------------------------------------------------------
--- Save bn runing_mean&running_var, and split weight & bias out.
+-- Save bn runing_mean & running_var, and split weight & bias.
 -- The reason for doing this is caffe uses BN+Scale to achieve
 -- the full torch BN functionality.
 --
-
 function bn_layer(layer, idx)
     -- Save running_mean & running_var.
     local layer_name = 'bn'..idx
@@ -71,7 +70,7 @@ function bn_layer(layer, idx)
         ['affine'] = affine,
     }
 
-    -- if affine=true, save BN weight & bias as Scale layer params.
+    -- If affine=true, save BN weight & bias as Scale layer param.
     if affine then
         layer_name = 'scale'..idx
         save_param(layer_name, layer.weight, layer.bias)
@@ -85,7 +84,7 @@ function bn_layer(layer, idx)
 end
 
 ---------------------------------------------------------------
--- Logging pooling layer configs.
+-- Save pooling layer.
 --
 function pooling_layer(layer, idx)
     local layer_name = 'pool'..idx
@@ -110,7 +109,7 @@ function pooling_layer(layer, idx)
 end
 
 ---------------------------------------------------------------
--- Save linear layer params.
+-- Save linear layer.
 --
 function linear_layer(layer, idx)
     local layer_name = 'linear'..idx
@@ -126,7 +125,20 @@ function linear_layer(layer, idx)
 end
 
 ---------------------------------------------------------------
--- For layer has no param or config, just logging.
+-- Save dropout layer.
+--
+function dropout_layer(layer, idx)
+    local p = layer.p
+    net_config[#net_config+1] = {
+        ['id'] = #net_config,
+        ['type'] = 'Dropout',
+        ['name'] = layer_name,
+        ['dropout_ratio'] = p,
+    }
+end
+
+---------------------------------------------------------------
+-- Save layers with no param.
 --
 function noparam_layer(layer, idx)
     -- Map torch layer type to caffe layer type and layer name.
@@ -136,29 +148,30 @@ function noparam_layer(layer, idx)
         ['nn.SoftMax'] = {'Softmax', 'softmax'..idx},
     }
 
-    local type_name = layer_type_name[torch.type(layer)]
+    local type_and_name = layer_type_name[torch.type(layer)]
 
     net_config[#net_config+1] = {
         ['id'] = #net_config,
-        ['type'] = type_name[1],
-        ['name'] = type_name[2],
+        ['type'] = type_and_name[1],
+        ['name'] = type_and_name[2],
     }
 end
 
 
-if #arg ~= 4 then
-    print('Usage: th torch/export.lua [input_shape]')
-    print('e.g. th torch/export.lua {1,1,28,28}')
+if #arg ~= 5 then
+    print('Usage: th torch/export.lua [path_to_torch_model] [input_shape]')
+    print('e.g. th torch/export.lua ./net.t7 {1,1,28,28}')
     return
 else
-    input_shape = { tonumber(arg[1]), tonumber(arg[2]),
-                    tonumber(arg[3]), tonumber(arg[4]) }
+    net_path = arg[1]
+    input_shape = { tonumber(arg[2]), tonumber(arg[3]),
+                    tonumber(arg[4]), tonumber(arg[5]) }
 end
 
 paths.mkdir(PARAM_DIR)
 paths.mkdir(CONFIG_DIR)
 
-net = torch.load('./model/nn.t7')
+net = torch.load(net_path)
 net_config = {}
 
 -- Add input layer config.
@@ -176,6 +189,7 @@ layerfn = {
     ['nn.SpatialMaxPooling'] = pooling_layer,
     ['nn.SpatialAveragePooling'] = pooling_layer,
     ['nn.Linear'] = linear_layer,
+    ['nn.Dropout'] = dropout_layer,
     ['nn.ReLU'] = noparam_layer,
     ['nn.View'] = noparam_layer,
     ['nn.SoftMax'] = noparam_layer,
@@ -185,7 +199,7 @@ print('==> Exporting..')
 for i = 1,#net do
     local layer = net:get(i)
     local layer_type = torch.type(layer)
-    print('... '..'Layer '..i..' : '..layer_type)
+    print(string.format('... Layer %d : %s', i, layer_type))
 
     local save_layer = layerfn[layer_type]
     assert(save_layer, 'ERROR: save '..layer_type..' not supported yet!')
