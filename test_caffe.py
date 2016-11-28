@@ -6,6 +6,9 @@ import numpy as np
 
 prototxt = './cvt_net.prototxt'
 binary = './cvt_net.caffemodel'
+# prototxt = './cvt_net.prototxt'
+# binary = './cvt_net.caffemodel'
+
 
 # prototxt = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE_deploy.prototxt'
 # binary = '/mnt/hgfs/D/download/vgg_face_caffe/vgg_face_caffe/VGG_FACE.caffemodel'

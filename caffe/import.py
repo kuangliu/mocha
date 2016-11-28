@@ -45,7 +45,8 @@ def scale_layer(layer_config, bottom_name):
                    bias_term=True)
 
 def relu_layer(layer_config, bottom_name):
-    return L.ReLU(bottom=bottom_name)
+    '''For ReLU layer, top=bottom'''
+    return L.ReLU(bottom=bottom_name, top=bottom_name, in_place=True)
 
 def pool_layer(layer_config, bottom_name):
     pool_type = layer_config['pool_type']

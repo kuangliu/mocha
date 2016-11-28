@@ -12,9 +12,12 @@ Reference: https://github.com/BVLC/caffe/blob/master/python/caffe/draw.py
 '''
 from __future__ import print_function
 
+import os
+import json
+import numpy as np
+
 from caffe.proto import caffe_pb2
 from google.protobuf import text_format
-from google.protobuf.descriptor import FieldDescriptor as FD
 
 
 class PrototxtParser:
@@ -30,48 +33,60 @@ class PrototxtParser:
     '''
     def __init__(self, prototxt):
         print('==> Parsing prototxt..')
+
         net = caffe_pb2.NetParameter()
         with open(prototxt, 'r') as f:
             text_format.Merge(f.read(), net)
 
-        layers = net.layer
-        if len(layers) == 0:
-            raise NotImplementedError('Caffemodel prototxt has 0 layers!')
+        net_layers = net.layer
+        num_layers = len(net_layers)
+        self.layers = []
 
-        self.layer_config = {}
+        # Input layer.
+        input_layers = [l for l in net_layers if l.type.lower() in ['data', 'dummydata']]
+        num_input_layers = len(input_layers)
 
-        # Data layer.
-        data_layers = [l for l in layers if l.type.lower() in ['data', 'dummydata']]
-        num_data_layers = len(data_layers)
+        assert num_input_layers in [0,1], 'Net has %d input layers!' % num_input_layers
 
-        if num_data_layers == 0:
+        if num_input_layers == 0:
             print('No data layer in prototxt, checking for input params..')
-            assert len(net.input) > 0
-            assert len(net.input_shape) > 0
-
+            assert len(net.input) > 0 and len(net.input_shape) > 0
             input_layer_name = net.input[0]
-            input_shape = net.input_shape[0].dim
-            print('... Find input layer', net.input[0], input_shape)
+            input_shape = list(net.input_shape[0].dim)
+            print('... Find input layer', input_layer_name, input_shape)
 
-            self.input_layer_name = input_layer_name
-            self.layer_config[input_layer_name] = {'input_shape': list(input_shape)}
-        elif num_data_layers == 1:
-            data_layer = data_layers[0]
-            layer_name = data_layer.name
+            # Add input layer.
+            num_layers += 1
+            self.layers.append({
+                'name': input_layer_name,
+                'type': 'DummyData',
+                'input_shape': input_shape
+            })
 
-            self.input_layer_name = layer_name
-            self.layer_config[layer_name] = {'input_shape': list(data_layer.dummy_data_param.shape[0].dim)}
-        else:
-            raise NotImplementedError('Number of data layers %d != 1' % num_data_layers)
+        # Map layer_name to index.
+        name_to_index = {input_layer_name: 0} if num_input_layers == 0 else {}
+        for layer in net_layers:
+            layer_name = layer.name
+            name_to_index[layer_name] = len(name_to_index)
 
-        # Other layers.
-        for layer in layers:
+        # Net structure graph represented in adjacent matrix.
+        self.graph = np.zeros((num_layers, num_layers))
+
+        # Add other net_layers.
+        for i, layer in enumerate(net_layers):
             layer_name = layer.name
             layer_type = layer.type
-
             assert type(layer_type==str), 'ERROR: only string layer type supported!'
-            print('... Find layer ', layer_name)
+            print('... Find layer %s' % layer_name)
 
+            # Add edge to graph.
+            self.graph[i][i] = 1
+            if layer_type.lower() not in ['data', 'dummydata']:
+                cur_index = name_to_index[layer_name]
+                btm_index = name_to_index[layer.bottom[0]]
+                self.graph[btm_index][cur_index] = 1
+
+            layer_config = {}
             if layer_type == 'Convolution':
                 cfg = layer.convolution_param
                 num_output = cfg.num_output
@@ -81,15 +96,15 @@ class PrototxtParser:
                 dH = cfg.stride[0] if len(cfg.stride) else cfg.stride_h
                 pW = cfg.pad[0] if len(cfg.pad) else cfg.pad_w
                 pH = cfg.pad[0] if len(cfg.pad) else cfg.pad_h
-                dW = dW if dW else 1    # set default stride=1
+                dW = dW if dW else 1  # set default stride=1
                 dH = dH if dH else 1
-                self.layer_config[layer_name] = {'num_output': num_output,
-                                           'kW': kW,
-                                           'kH': kH,
-                                           'dW': dW,
-                                           'dH': dH,
-                                           'pW': pW,
-                                           'pH': pH}
+                layer_config = {'num_output': num_output,
+                                'kW': kW,
+                                'kH': kH,
+                                'dW': dW,
+                                'dH': dH,
+                                'pW': pW,
+                                'pH': pH}
             elif layer_type == 'Pooling':
                 cfg = layer.pooling_param
                 pool_type = cfg.pool  # MAX=0, AVE=1, STOCHASTIC=2
@@ -99,23 +114,40 @@ class PrototxtParser:
                 dH = cfg.stride_h if cfg.stride_h else cfg.stride
                 pW = cfg.pad_w if cfg.pad_w else cfg.pad
                 pH = cfg.pad_h if cfg.pad_h else cfg.pad
-                dW = dW if dW else 1    # set default stride=1
+                dW = dW if dW else 1  # set default stride=1
                 dH = dH if dH else 1
-                self.layer_config[layer_name] = {'pool_type': pool_type,
-                                           'kW': kW,
-                                           'kH': kH,
-                                           'dW': dW,
-                                           'dH': dH,
-                                           'pW': pW,
-                                           'pH': pH}
+                layer_config = {'pool_type': pool_type,
+                                'kW': kW,
+                                'kH': kH,
+                                'dW': dW,
+                                'dH': dH,
+                                'pW': pW,
+                                'pH': pH}
             elif layer_type == 'Dropout':
                 p = layer.dropout_param.dropout_ratio
-                self.layer_config[layer_name] = {'dropout_ratio': p}
+                layer_config = {'dropout_ratio': p}
             elif layer_type == 'InnerProduct':
                 num_output = layer.inner_product_param.num_output
-                self.layer_config[layer_name] = {'num_output': num_output}
+                layer_config = {'num_output': num_output}
 
-    def get_layer_config(self, layer_name):
-        '''Return layer config.'''
-        c = self.layer_config.get(layer_name)
-        return c if c else {}
+            layer_config.update({
+                'name': layer_name,
+                'type': layer_type,
+            })
+
+            self.layers.append(layer_config)
+
+        self.save_config_and_graph()
+
+    def save_config_and_graph(self):
+        '''Save config and graph.'''
+        CONFIG_DIR = './config/'
+        if not os.path.isdir(CONFIG_DIR):
+            os.mkdir(CONFIG_DIR)
+
+        print('Saving net config..')
+        with open(CONFIG_DIR + 'net.json', 'w') as f:
+            json.dump(self.layers, f, indent=2)
+
+        print('Saving graph..')
+        np.save(CONFIG_DIR + 'graph.npy', self.graph)
