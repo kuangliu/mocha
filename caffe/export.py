@@ -18,6 +18,7 @@ CONFIG_DIR = './config/'  # Directory for saving network config.
 
 def dump_param(net, layer_name):
     '''Dump layer params to disk.
+    
     For CONV, LINEAR, SCALE layer, save weight & bias.
     For BN, save running_mean & running_var.
 

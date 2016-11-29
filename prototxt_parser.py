@@ -80,7 +80,6 @@ class PrototxtParser:
             print('... Find layer %s' % layer_name)
 
             # Add edge to graph.
-            self.graph[i][i] = 1
             if layer_type.lower() not in ['data', 'dummydata']:
                 cur_index = name_to_index[layer_name]
                 btm_index = name_to_index[layer.bottom[0]]
